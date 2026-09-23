@@ -1,0 +1,22 @@
+{
+  "name": "nova-lancer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "NOVA LANCER — a Star Fox-inspired 3D rail shooter for the browser (three.js, procedural audio)",
+  "author": "たぬ",
+  "license": "MIT",
+  "homepage": "https://tanuu5.github.io/nova-lancer/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tanuu5/nova-lancer.git"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "dev": "node tools/build.mjs --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "three": "^0.170.0"
+  }
+}

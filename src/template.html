@@ -1,0 +1,379 @@
+<title>NOVA LANCER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+1:wght@400;700;900&family=Oxanium:wght@400;600;800&family=Russo+One&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #eaf6ff;
+    --dim: #8eb0c6;
+    --hud: #7fe7ff;
+    --hud-2: #3fb8ff;
+    --hud-dim: rgba(127, 231, 255, 0.32);
+    --amber: #ffc24a;
+    --danger: #ff4d6a;
+    --lime: #b4ff6a;
+    --panel: rgba(5, 14, 32, 0.66);
+    --panel-2: rgba(8, 24, 52, 0.82);
+    --edge: rgba(127, 231, 255, 0.5);
+    --f-display: 'Russo One', 'Oxanium', system-ui, sans-serif;
+    --f-hud: 'Oxanium', 'Russo One', ui-monospace, system-ui, sans-serif;
+    --f-jp: 'M PLUS 1', 'Hiragino Sans', 'Yu Gothic', system-ui, sans-serif;
+    --f-radio: 'DotGothic16', 'M PLUS 1', 'Hiragino Sans', monospace;
+    --gutter: max(16px, env(safe-area-inset-left, 0px));
+  }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: #03050b; overflow: hidden; }
+  body { font-family: var(--f-jp); color: var(--ink); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #app { position: fixed; inset: 0; background: #03050b; }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #hudc { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .layer { position: absolute; inset: 0; pointer-events: none; }
+  button { font: inherit; color: inherit; }
+
+  /* ------------------------------------------------ HUD */
+  #hud { opacity: 0; transition: opacity .5s; }
+  #hud.on { opacity: 1; }
+  .hud-tl { position: absolute; left: var(--gutter); top: calc(14px + env(safe-area-inset-top, 0px)); display: grid; gap: 8px; }
+  .hud-tr { position: absolute; right: var(--gutter); top: calc(12px + env(safe-area-inset-top, 0px)); text-align: right; }
+  .hud-br { position: absolute; right: var(--gutter); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; justify-items: end; gap: 6px; }
+  .g-row { display: flex; align-items: center; gap: 10px; }
+  .g-label { font: 600 11px/1 var(--f-hud); letter-spacing: .22em; color: var(--hud); text-shadow: 0 0 8px rgba(127,231,255,.6); width: 56px; }
+  .g-bar { position: relative; height: 14px; width: clamp(150px, 22vw, 260px); background: rgba(3, 10, 24, .7); border: 1px solid var(--edge);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); box-shadow: inset 0 0 12px rgba(0,0,0,.6); }
+  .g-fill { position: absolute; inset: 2px auto 2px 2px; width: 50%; background: linear-gradient(90deg, #2d7cff, #7fe7ff 70%, #dffaff);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); transition: width .18s ease-out, background .3s; box-shadow: 0 0 12px rgba(127,231,255,.8); }
+  .g-ghost { position: absolute; inset: 2px auto 2px 2px; width: 50%; background: rgba(255, 90, 110, .75); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); transition: width .7s ease-in .25s; }
+  .g-ticks { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(3,10,24,.8) calc(10% - 1px) 10%); }
+  #g-shield.low .g-fill { background: linear-gradient(90deg, #ff2d55, #ff8a6a); box-shadow: 0 0 14px rgba(255,60,90,.9); animation: blinkLow .5s steps(2) infinite; }
+  @keyframes blinkLow { 50% { opacity: .45; } }
+  #g-boost .g-bar { height: 8px; width: clamp(110px, 16vw, 190px); }
+  #g-boost .g-fill { background: linear-gradient(90deg, #ffb13d, #ffe27a); box-shadow: 0 0 10px rgba(255,200,80,.7); }
+  #g-boost.hot .g-fill { background: linear-gradient(90deg, #ff4d2d, #ff9a3d); }
+  .gold { display: flex; gap: 6px; margin-left: 66px; }
+  .gold i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 194, 74, .45); box-sizing: border-box; }
+  .gold i.on { border-color: var(--amber); background: radial-gradient(circle, #fff3c4 0 20%, #ffc24a 45%, #b87a10 100%); box-shadow: 0 0 10px rgba(255,194,74,.9); }
+  .lives { font: 600 13px/1 var(--f-hud); color: var(--ink); margin-left: 66px; display: flex; align-items: center; gap: 6px; letter-spacing: .1em; }
+  .lives svg { width: 22px; height: 14px; }
+  .hits-label { font: 600 11px/1 var(--f-hud); letter-spacing: .3em; color: var(--hud); }
+  .hits { font: 800 clamp(34px, 5vw, 52px)/0.95 var(--f-hud); font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 18px rgba(127,231,255,.7), 0 2px 0 rgba(0,0,0,.4); }
+  .hits.pop { animation: pop .25s ease-out; }
+  @keyframes pop { 0% { transform: scale(1.25); color: var(--lime); } 100% { transform: scale(1); } }
+  .score { font: 600 14px/1.4 var(--f-hud); font-variant-numeric: tabular-nums; color: var(--dim); letter-spacing: .12em; }
+  .score b { color: var(--ink); font-weight: 600; }
+  .bombs { display: flex; gap: 5px; }
+  .bombs i { width: 12px; height: 22px; border-radius: 6px 6px 3px 3px; background: linear-gradient(180deg, #ffd0a8, #ff6a2a 40%, #a8300e); box-shadow: 0 0 8px rgba(255,110,50,.7); position: relative; }
+  .bombs i::after { content: ''; position: absolute; left: 3px; right: 3px; top: -4px; height: 4px; background: #3a3e46; border-radius: 1px; }
+  .laser-lv { font: 600 11px/1 var(--f-hud); letter-spacing: .24em; color: var(--lime); text-shadow: 0 0 8px rgba(180,255,106,.6); }
+  .laser-lv.hyper { color: #8fc8ff; text-shadow: 0 0 10px rgba(120,180,255,.9); }
+  .bomb-label { font: 600 11px/1 var(--f-hud); letter-spacing: .24em; color: #ffb08a; }
+
+  /* Boss bar */
+  #boss { position: absolute; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(560px, calc(100vw - 2 * (var(--gutter) + clamp(150px, 22vw, 260px) + 100px))); opacity: 0; transition: opacity .6s; }
+  @media (max-width: 1280px) { #boss { top: calc(96px + env(safe-area-inset-top, 0px)); width: min(520px, calc(100vw - 32px)); } #tip { top: calc(142px + env(safe-area-inset-top, 0px)) !important; } }
+  #boss.on { opacity: 1; }
+  .boss-name { display: flex; justify-content: space-between; align-items: baseline; font: 600 12px/1 var(--f-hud); letter-spacing: .26em; color: #ffb3c0; margin-bottom: 6px; text-shadow: 0 0 10px rgba(255,60,90,.7); }
+  .boss-name span:last-child { font-family: var(--f-jp); letter-spacing: .08em; font-weight: 700; color: #ff9aa9; }
+  .boss-bar { height: 10px; background: rgba(20, 3, 8, .7); border: 1px solid rgba(255, 80, 110, .55); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); position: relative; }
+  .boss-bar > div { position: absolute; inset: 2px; transform-origin: left; background: linear-gradient(90deg, #ff2d55, #ff9a6a); box-shadow: 0 0 12px rgba(255,60,90,.9); transition: transform .2s; }
+  .boss-bar > .ghost { background: rgba(255,255,255,.55); transition: transform .8s ease-in .3s; box-shadow: none; }
+
+  /* Radio */
+  #radio { position: absolute; left: var(--gutter); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 12px; align-items: stretch;
+    width: min(560px, calc(100vw - 2 * var(--gutter) - 90px)); transform: translateY(20px); opacity: 0; transition: opacity .25s, transform .25s; }
+  #radio.on { transform: none; opacity: 1; }
+  .r-face { position: relative; width: clamp(72px, 10vw, 104px); aspect-ratio: 1; flex: none; background: radial-gradient(circle at 50% 35%, #123a66, #061226 75%);
+    border: 1px solid var(--edge); overflow: hidden; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); }
+  .r-face svg { position: absolute; inset: 0; }
+  .r-face::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+  .r-face.static::before { content: ''; position: absolute; inset: 0; z-index: 2; background: repeating-linear-gradient(0deg, rgba(255,255,255,.35) 0 1px, rgba(0,0,0,.4) 1px 2px); animation: stat .08s steps(2) infinite; }
+  @keyframes stat { 50% { transform: translateY(1px); } }
+  .r-body { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--hud-dim); padding: 8px 12px 10px; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); }
+  .r-name { font: 800 12px/1 var(--f-hud); letter-spacing: .24em; margin-bottom: 6px; display: flex; gap: 10px; align-items: baseline; }
+  .r-name small { font: 600 10px/1 var(--f-hud); letter-spacing: .2em; color: var(--dim); }
+  .r-text { font: 400 clamp(14px, 1.7vw, 17px)/1.55 var(--f-radio); color: #f2fbff; min-height: 3.1em; text-wrap: pretty; overflow-wrap: anywhere; }
+  .r-text.enemy { color: #ffb0bc; }
+
+  /* Tips & banners */
+  #tip { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -8px); padding: 7px 16px 7px 14px; background: var(--panel-2);
+    border-left: 3px solid var(--lime); font: 700 13px/1.4 var(--f-jp); color: #eaffd8; opacity: 0; transition: opacity .3s, transform .3s; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+  #tip.on { opacity: 1; transform: translate(-50%, 0); }
+  #tip kbd { font: 600 12px/1 var(--f-hud); padding: 2px 6px; border: 1px solid rgba(180,255,106,.6); border-radius: 3px; margin: 0 2px; color: var(--lime); }
+  #banner { position: absolute; left: 0; right: 0; top: 34%; text-align: center; opacity: 0; transition: opacity .5s; }
+  #banner.on { opacity: 1; }
+  #banner .b-small { font: 600 clamp(11px, 1.4vw, 14px)/1 var(--f-hud); letter-spacing: .6em; color: var(--hud); text-shadow: 0 0 10px rgba(127,231,255,.7); }
+  #banner .b-big { font: 400 clamp(34px, 7vw, 76px)/1.05 var(--f-display); letter-spacing: .06em; margin: 10px 0 8px; color: #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #d7f4ff 48%, #6fc8ff 52%, #e8fbff 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 16px rgba(80,190,255,.55)); font-style: italic; }
+  #banner .b-sub { font: 700 clamp(13px, 1.8vw, 18px)/1.3 var(--f-jp); letter-spacing: .3em; color: #dff5ff; }
+  #banner .b-line { height: 1px; width: min(520px, 70vw); margin: 12px auto; background: linear-gradient(90deg, transparent, var(--hud), transparent); }
+  #banner.gold .b-big { background: linear-gradient(180deg, #fffbe8 0%, #ffe39a 48%, #ffae2a 52%, #fff2c8 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 18px rgba(255,180,60,.6)); }
+  #banner.boss .b-big { background: linear-gradient(180deg, #ffffff 0%, #ffd3da 46%, #ff2d45 52%, #ff9aa8 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 20px rgba(255,40,70,.65)); letter-spacing: .14em; }
+  #banner.boss .b-small { color: #ff6a7a; text-shadow: 0 0 10px rgba(255,60,90,.8); }
+  #banner.boss .b-line { background: linear-gradient(90deg, transparent, #ff4d6a, transparent); }
+  #warning { position: absolute; left: 0; right: 0; top: 40%; transform: translateY(-50%); display: none; }
+  #warning.on { display: block; animation: warnFlash .5s steps(2) infinite; }
+  #warning .w-bar { height: 22px; background: repeating-linear-gradient(-45deg, #ff2d45 0 16px, #1a0004 16px 32px); opacity: .85; animation: slide 1s linear infinite; }
+  @keyframes slide { to { background-position: 45px 0; } }
+  #warning .w-text { text-align: center; font: 400 clamp(44px, 9vw, 96px)/1.3 var(--f-display); letter-spacing: .2em; color: #ff3b55; text-shadow: 0 0 24px rgba(255,40,70,.9); font-style: italic; }
+  #warning .w-sub { text-align: center; font: 700 14px/1 var(--f-jp); letter-spacing: .5em; color: #ffc0c8; margin-bottom: 10px; }
+  @keyframes warnFlash { 50% { opacity: .35; } }
+
+  /* ------------------------------------------------ Screens */
+  .screen { position: absolute; inset: 0; display: none; pointer-events: auto; }
+  .screen.on { display: block; }
+  .scrim { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 40%, rgba(2,8,20,.15), rgba(2,6,14,.72)); }
+  #loading { place-items: center; background: #03050b; z-index: 30; }
+  #loading.on { display: grid; }
+  .load-box { width: min(420px, 80vw); text-align: center; }
+  .load-bar { height: 3px; background: rgba(127,231,255,.15); margin-top: 22px; overflow: hidden; }
+  .load-bar div { height: 100%; width: 0; background: linear-gradient(90deg, #2d7cff, #7fe7ff); box-shadow: 0 0 10px #7fe7ff; transition: width .2s; }
+  .load-msg { margin-top: 12px; font: 600 11px/1 var(--f-hud); letter-spacing: .3em; color: var(--dim); }
+
+  .logo { font: 400 clamp(46px, 10vw, 118px)/.9 var(--f-display); font-style: italic; letter-spacing: .02em; margin: 0; position: relative;
+    background: linear-gradient(180deg, #ffffff 0%, #eaf8ff 30%, #9fdcff 49%, #2a6cff 51%, #7fd4ff 72%, #ffffff 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 0 #0a1a3a) drop-shadow(0 0 24px rgba(60,160,255,.45)); }
+  .logo .l2 { display: block; font-size: .56em; letter-spacing: .38em; margin-top: .08em; padding-left: .3em;
+    background: linear-gradient(180deg, #fff6d8, #ffc24a 50%, #ff7a1e 51%, #ffe0a0); -webkit-background-clip: text; background-clip: text; }
+  #title .logo { background-image: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.95) 50%, transparent 58%), linear-gradient(180deg, #ffffff 0%, #eaf8ff 30%, #9fdcff 49%, #2a6cff 51%, #7fd4ff 72%, #ffffff 100%);
+    background-size: 300% 100%, 100% 100%; background-repeat: no-repeat; animation: logoShine 5.5s ease-in-out infinite 1.2s; }
+  #title .logo .l2 { background-image: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.9) 50%, transparent 58%), linear-gradient(180deg, #fff6d8, #ffc24a 50%, #ff7a1e 51%, #ffe0a0);
+    background-size: 300% 100%, 100% 100%; background-repeat: no-repeat; animation: logoShine 5.5s ease-in-out infinite 1.35s; }
+  @keyframes logoShine { 0% { background-position: 120% 0, 0 0; } 35%, 100% { background-position: -20% 0, 0 0; } }
+  .logo-jp { font: 900 clamp(12px, 1.6vw, 16px)/1 var(--f-jp); letter-spacing: .9em; color: #cfeaff; margin: 14px 0 0 4px; text-shadow: 0 0 10px rgba(80,180,255,.6); }
+  #title .t-wrap { position: absolute; left: clamp(20px, 7vw, 110px); top: 50%; transform: translateY(-50%); max-width: calc(100vw - 40px); }
+  .press { margin-top: 38px; font: 600 clamp(13px, 1.6vw, 16px)/1 var(--f-hud); letter-spacing: .5em; color: #fff; animation: blink 1.4s ease-in-out infinite; text-shadow: 0 0 10px rgba(127,231,255,.8); }
+  @keyframes blink { 50% { opacity: .25; } }
+  .menu { margin-top: 30px; display: grid; gap: 4px; width: min(360px, calc(100vw - 40px)); }
+  .mi { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 14px 10px 18px; background: transparent; border: 0; text-align: left; cursor: pointer;
+    font: 700 16px/1.2 var(--f-jp); letter-spacing: .12em; color: var(--dim); position: relative; transition: color .15s, background .15s, padding .15s; }
+  .mi .en { font: 600 10px/1 var(--f-hud); letter-spacing: .3em; opacity: .7; }
+  .mi .val { font: 600 13px/1 var(--f-hud); letter-spacing: .18em; color: var(--amber); }
+  .mi.sel { color: #fff; background: linear-gradient(90deg, rgba(63,184,255,.28), rgba(63,184,255,0)); padding-left: 26px; }
+  .mi.sel::before { content: ''; position: absolute; left: 8px; top: 50%; width: 8px; height: 8px; margin-top: -4px; background: var(--hud); transform: rotate(45deg); box-shadow: 0 0 10px var(--hud); }
+  .mi:focus-visible { outline: 1px solid var(--hud); outline-offset: 2px; }
+  .t-foot { position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    font: 600 11px/1.4 var(--f-hud); letter-spacing: .2em; color: rgba(200, 225, 245, .65); }
+  .t-best b { color: var(--amber); font-weight: 600; }
+
+  .panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100vw - 32px)); max-height: calc(100% - 40px); overflow: auto;
+    background: var(--panel-2); border: 1px solid var(--edge); padding: 26px 28px; box-sizing: border-box; box-shadow: 0 0 40px rgba(0, 0, 0, .5), inset 0 0 60px rgba(40,120,220,.08);
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px)); }
+  .p-title { font: 400 26px/1 var(--f-display); font-style: italic; letter-spacing: .08em; margin: 0 0 4px; color: #fff; }
+  .p-sub { font: 700 12px/1.4 var(--f-jp); letter-spacing: .3em; color: var(--hud); margin-bottom: 18px; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 9px 18px; align-items: center; font-size: 14px; }
+  .keys dt { font: 600 12px/1.2 var(--f-hud); letter-spacing: .08em; color: var(--ink); white-space: nowrap; }
+  .keys dt kbd, .tip-k { display: inline-block; min-width: 20px; text-align: center; padding: 3px 6px; margin: 1px 2px; border: 1px solid var(--edge); border-bottom-width: 2px; border-radius: 3px; background: rgba(127,231,255,.07); font: 600 11px/1 var(--f-hud); }
+  .keys dd { margin: 0; color: var(--dim); font-weight: 400; line-height: 1.45; }
+  .keys dd b { color: var(--ink); font-weight: 700; }
+  .p-note { margin-top: 16px; font-size: 12px; color: var(--dim); line-height: 1.6; }
+  .p-actions { margin-top: 18px; display: grid; gap: 4px; }
+  .set-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; }
+  input[type=range] { width: 150px; accent-color: #7fe7ff; }
+
+  #pause .panel { width: min(420px, calc(100vw - 32px)); }
+  #gameover .panel, #results .panel { text-align: left; }
+  .go-title { font: 400 clamp(40px, 8vw, 72px)/1 var(--f-display); font-style: italic; letter-spacing: .06em; color: #ff4d6a; text-shadow: 0 0 24px rgba(255,60,90,.6); margin: 0 0 6px; }
+  .res-grid { display: grid; grid-template-columns: 1fr auto; gap: 10px 20px; margin: 18px 0 6px; font: 600 14px/1.2 var(--f-hud); letter-spacing: .14em; }
+  .res-grid dt { color: var(--dim); }
+  .res-grid dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: #fff; }
+  .res-grid dd small { color: var(--dim); font-size: 11px; margin-left: 6px; }
+  .res-total { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--hud-dim); padding-top: 14px; margin-top: 10px; }
+  .res-total .lbl { font: 600 13px/1 var(--f-hud); letter-spacing: .3em; color: var(--hud); }
+  .res-total .num { font: 800 34px/1 var(--f-hud); font-variant-numeric: tabular-nums; }
+  .rank { display: flex; align-items: center; gap: 18px; margin-top: 16px; min-height: 84px; }
+  .rank .r { font: 400 76px/1 var(--f-display); font-style: italic; opacity: 0; transform: scale(2); transition: opacity .3s, transform .35s cubic-bezier(.2,1.6,.4,1); }
+  .rank .r.on { opacity: 1; transform: none; }
+  .rank .r.S { color: #ffd84a; text-shadow: 0 0 30px rgba(255,200,60,.8); }
+  .rank .r.A { color: #7fe7ff; text-shadow: 0 0 24px rgba(127,231,255,.7); }
+  .rank .r.B { color: #b4ff6a; } .rank .r.C { color: #c7c7d4; }
+  .rank .meta { font: 700 13px/1.6 var(--f-jp); color: var(--dim); }
+  .rank .meta b { color: var(--amber); }
+  .medal { display: inline-flex; align-items: center; gap: 8px; font: 600 12px/1 var(--f-hud); letter-spacing: .2em; color: #ffd84a; opacity: 0; transition: opacity .4s; }
+  .medal.on { opacity: 1; }
+  .medal i { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff6c4, #ffc24a 45%, #a86a10); box-shadow: 0 0 12px rgba(255,200,60,.8); }
+
+  /* Touch controls */
+  #touch { display: none; }
+  #touch.on { display: block; }
+  .t-stick { position: absolute; left: 0; bottom: 0; width: 45%; height: 60%; pointer-events: auto; }
+  .t-knob { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid rgba(127,231,255,.45); background: rgba(10,30,60,.25); display: none; }
+  .t-knob i { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: rgba(127,231,255,.35); box-shadow: 0 0 12px rgba(127,231,255,.6); }
+  .t-btns { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(3, 62px); gap: 10px; pointer-events: auto; }
+  .t-btn { height: 62px; border-radius: 50%; border: 2px solid rgba(127,231,255,.5); background: rgba(10, 30, 60, .45); font: 700 10px/1 var(--f-hud); letter-spacing: .1em; color: #dff5ff; display: grid; place-items: center; }
+  .t-btn.fire { grid-column: 3; grid-row: 2; height: 76px; width: 76px; margin: -7px; border-color: rgba(180,255,106,.8); color: var(--lime); }
+  .t-btn.pressed { background: rgba(127,231,255,.35); }
+  .t-pause { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: 44px; height: 30px; border-radius: 6px; border: 1px solid var(--edge); background: rgba(5,14,32,.5); pointer-events: auto; color: #fff; font: 700 12px/1 var(--f-hud); }
+  @media (max-width: 720px) {
+    .g-label { width: 44px; font-size: 9px; }
+    .g-bar { width: clamp(110px, 34vw, 200px); }
+    #g-boost .g-bar { width: clamp(80px, 26vw, 150px); }
+    .gold, .lives { margin-left: 54px; }
+    .hits { font-size: 34px; }
+    #radio { width: calc(100vw - 2 * var(--gutter)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+    body.touch #radio { bottom: auto; top: calc(104px + env(safe-area-inset-top, 0px)); }
+    body.touch .hud-br { right: auto; left: var(--gutter); justify-items: start; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+    body.touch #tip { top: calc(262px + env(safe-area-inset-top, 0px)) !important; white-space: normal; text-align: center; width: max-content; max-width: calc(100vw - 32px); }
+    body.touch .t-pause { left: auto; right: var(--gutter); transform: none; top: calc(84px + env(safe-area-inset-top, 0px)); }
+    body.touch #boss { top: calc(214px + env(safe-area-inset-top, 0px)); width: calc(100vw - 32px); }
+    .panel { padding: 20px 18px; }
+    .keys { font-size: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .press, #warning.on, .hits.pop, #title .logo, #title .logo .l2 { animation: none; }
+  }
+</style>
+<!-- @@BODY@@ -->
+<div id="app">
+  <canvas id="hudc"></canvas>
+
+  <div id="hud" class="layer">
+    <div class="hud-tl">
+      <div class="g-row" id="g-shield"><div class="g-label">SHIELD</div><div class="g-bar"><div class="g-ghost"></div><div class="g-fill"></div><div class="g-ticks"></div></div></div>
+      <div class="g-row" id="g-boost"><div class="g-label">BOOST</div><div class="g-bar"><div class="g-fill"></div></div></div>
+      <div class="gold" id="gold" aria-label="ゴールドリング"><i></i><i></i><i></i></div>
+      <div class="lives" id="lives"></div>
+    </div>
+    <div class="hud-tr">
+      <div class="hits-label">HITS</div>
+      <div class="hits" id="hits">0</div>
+      <div class="score">SCORE <b id="score">0</b></div>
+    </div>
+    <div class="hud-br">
+      <div class="laser-lv" id="laserlv">LASER · SINGLE</div>
+      <div class="bomb-label">BOMB</div>
+      <div class="bombs" id="bombs"></div>
+    </div>
+    <div id="boss">
+      <div class="boss-name"><span>MIZUCHI</span><span>海竜型機動兵器 ミズチ</span></div>
+      <div class="boss-bar"><div class="ghost" id="bossghost"></div><div id="bossfill"></div></div>
+    </div>
+    <div id="tip"></div>
+    <div id="radio">
+      <div class="r-face" id="rface"></div>
+      <div class="r-body"><div class="r-name" id="rname"></div><div class="r-text" id="rtext"></div></div>
+    </div>
+    <div id="banner"><div class="b-small"></div><div class="b-big"></div><div class="b-line"></div><div class="b-sub"></div></div>
+    <div id="warning"><div class="w-bar"></div><div class="w-sub">巨大反応接近</div><div class="w-text">WARNING</div><div class="w-bar"></div></div>
+  </div>
+
+  <div id="touch" class="layer">
+    <div class="t-stick" id="tstick"><div class="t-knob" id="tknob"><i></i></div></div>
+    <div class="t-btns">
+      <button class="t-btn" data-code="TouchRollL">ROLL◀</button>
+      <button class="t-btn" data-code="TouchBrake">BRAKE</button>
+      <button class="t-btn" data-code="TouchRollR">▶ROLL</button>
+      <button class="t-btn" data-code="TouchBomb">BOMB</button>
+      <button class="t-btn" data-code="TouchBoost">BOOST</button>
+      <button class="t-btn fire" data-code="TouchFire">FIRE</button>
+    </div>
+    <button class="t-pause" id="tpause" aria-label="ポーズ">II</button>
+  </div>
+
+  <section id="title" class="screen">
+    <div class="scrim"></div>
+    <div class="t-wrap">
+      <h1 class="logo">NOVA<span class="l2">LANCER</span></h1>
+      <div class="logo-jp">ノヴァ・ランサー</div>
+      <div class="press" id="press">PRESS ANY KEY</div>
+      <div class="menu" id="mainmenu" hidden>
+        <button class="mi" data-act="start"><span>ミッション開始</span><span class="en">START</span></button>
+        <button class="mi" data-act="diff"><span>難易度</span><span class="val" id="diffval">NORMAL</span></button>
+        <button class="mi" data-act="controls"><span>操作方法</span><span class="en">CONTROLS</span></button>
+        <button class="mi" data-act="settings"><span>設定</span><span class="en">SETTINGS</span></button>
+      </div>
+    </div>
+    <div class="t-foot"><span class="t-best" id="best">BEST <b>0</b></span><span>MISSION 01 · AZURE COAST</span></div>
+  </section>
+
+  <section id="controls" class="screen">
+    <div class="scrim"></div>
+    <div class="panel">
+      <h2 class="p-title">CONTROLS</h2>
+      <div class="p-sub">操作方法</div>
+      <dl class="keys">
+        <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></dt><dd><b>移動</b></dd>
+        <dt><kbd>J</kbd> / <kbd>Space</kbd> / <kbd>Z</kbd></dt><dd><b>ショット</b>　長押しでチャージ → ロックオンして発射</dd>
+        <dt><kbd>K</kbd> / <kbd>B</kbd> / <kbd>X</kbd></dt><dd><b>スマートボム</b>　もう一度押すと即起爆</dd>
+        <dt><kbd>L</kbd> / <kbd>Shift</kbd> / <kbd>C</kbd></dt><dd><b>ブースト</b></dd>
+        <dt><kbd>I</kbd> / <kbd>V</kbd></dt><dd><b>ブレーキ</b></dd>
+        <dt><kbd>Q</kbd> <kbd>E</kbd> ×2</dt><dd><b>ローリング</b>　素早く2回押す。敵弾をはじく。押し続けると機体を傾けて鋭く旋回</dd>
+        <dt><kbd>Esc</kbd> / <kbd>P</kbd></dt><dd><b>ポーズ</b></dd>
+        <dt>マウス</dt><dd>左クリック：ショット／右クリック：ボム</dd>
+        <dt>ゲームパッド</dt><dd>スティック：移動　A：ショット　B：ボム　R2：ブースト　L2：ブレーキ　L1/R1 ×2：ローリング</dd>
+        <dt>タッチ</dt><dd>画面左下をドラッグで移動、右下のボタンでショット・ボム・ブースト・ブレーキ・ローリング</dd>
+      </dl>
+      <p class="p-note">リングを通過するとシールド回復。ゴールドリングを3つ集めるとシールド最大値アップ。敵を撃墜して HITS を稼ごう。</p>
+      <div class="p-actions"><button class="mi sel" data-act="back"><span>戻る</span><span class="en">BACK</span></button></div>
+    </div>
+  </section>
+
+  <section id="settings" class="screen">
+    <div class="scrim"></div>
+    <div class="panel">
+      <h2 class="p-title">SETTINGS</h2>
+      <div class="p-sub">設定</div>
+      <div class="menu" style="width:100%;margin-top:0">
+        <label class="mi set-row" data-act="vol-master"><span>マスター音量</span><input type="range" id="s-master" min="0" max="100" step="5"></label>
+        <label class="mi set-row" data-act="vol-music"><span>BGM 音量</span><input type="range" id="s-music" min="0" max="100" step="5"></label>
+        <label class="mi set-row" data-act="vol-sfx"><span>効果音 音量</span><input type="range" id="s-sfx" min="0" max="100" step="5"></label>
+        <button class="mi" data-act="invert"><span>上下操作の反転</span><span class="val" id="s-invert">OFF</span></button>
+        <button class="mi" data-act="shake"><span>画面の揺れ</span><span class="val" id="s-shake">ON</span></button>
+        <button class="mi" data-act="quality"><span>画質</span><span class="val" id="s-quality">AUTO</span></button>
+        <button class="mi" data-act="back"><span>戻る</span><span class="en">BACK</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="pause" class="screen">
+    <div class="scrim"></div>
+    <div class="panel">
+      <h2 class="p-title">PAUSE</h2>
+      <div class="p-sub">一時停止中</div>
+      <div class="menu" style="width:100%;margin-top:0">
+        <button class="mi" data-act="resume"><span>再開</span><span class="en">RESUME</span></button>
+        <button class="mi" data-act="retry"><span>チェックポイントからやり直す</span><span class="en">RETRY</span></button>
+        <button class="mi" data-act="controls"><span>操作方法</span><span class="en">CONTROLS</span></button>
+        <button class="mi" data-act="settings"><span>設定</span><span class="en">SETTINGS</span></button>
+        <button class="mi" data-act="quit"><span>タイトルへ戻る</span><span class="en">QUIT</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="gameover" class="screen">
+    <div class="scrim"></div>
+    <div class="panel">
+      <h2 class="go-title">GAME OVER</h2>
+      <div class="p-sub" id="go-sub">ランサー隊、撃墜……</div>
+      <div class="menu" style="width:100%">
+        <button class="mi" data-act="continue"><span>コンティニュー（スコアはリセット）</span><span class="en">CONTINUE</span></button>
+        <button class="mi" data-act="quit"><span>タイトルへ戻る</span><span class="en">QUIT</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="results" class="screen">
+    <div class="scrim"></div>
+    <div class="panel">
+      <h2 class="p-title">MISSION COMPLETE</h2>
+      <div class="p-sub">惑星アクエリア 沿岸防衛線 突破</div>
+      <dl class="res-grid" id="resgrid"></dl>
+      <div class="res-total"><span class="lbl">TOTAL SCORE</span><span class="num" id="restotal">0</span></div>
+      <div class="rank"><div class="r" id="rank">S</div><div class="meta" id="rankmeta"></div></div>
+      <div class="medal" id="medal"><i></i>MEDAL GET</div>
+      <div class="menu" style="width:100%" id="resmenu">
+        <button class="mi" data-act="again"><span>もう一度出撃</span><span class="en">RETRY</span></button>
+        <button class="mi" data-act="quit"><span>タイトルへ戻る</span><span class="en">TITLE</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="loading" class="screen on">
+    <div class="load-box">
+      <h1 class="logo" style="font-size:clamp(34px,7vw,64px)">NOVA<span class="l2">LANCER</span></h1>
+      <div class="load-bar"><div id="loadfill"></div></div>
+      <div class="load-msg" id="loadmsg">INITIALIZING</div>
+    </div>
+  </section>
+</div>
+<!-- @@SCRIPT@@ -->
