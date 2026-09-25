@@ -243,7 +243,7 @@ class BeamBatch {
           float x = vUv.x;
           float core = exp(-x * x * 18.0);
           float halo = exp(-x * x * 3.0) * 0.55;
-          float ends = smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.88, vUv.y);
+          float ends = smoothstep(0.0, 0.12, vUv.y) * (1.0 - smoothstep(0.88, 1.0, vUv.y));
           vec3 c = vCol * halo + vec3(1.0) * core * dot(vCol, vec3(0.33)) * 0.8;
           float fog = exp(-fogDensity * 0.7 * vView);
           gl_FragColor = vec4(c * ends * fog, 1.0);
@@ -251,6 +251,9 @@ class BeamBatch {
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
+      // The quad is built in view space; depending on where the beam sits relative to the camera its
+      // winding flips, so a front-face-only material culled every shot flying below the eye line.
+      side: THREE.DoubleSide,
     });
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.frustumCulled = false;

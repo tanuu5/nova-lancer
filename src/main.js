@@ -67,7 +67,9 @@ async function boot() {
   resetCamera(ship);
   updateCamera(0.016, ship);
   // compile every program up-front to avoid hitches mid-game
-  try { await G.renderer.compileAsync(G.scene, G.camera); } catch (e) { try { G.renderer.compile(G.scene, G.camera); } catch (e2) { /* ignore */ } }
+  // Parallel shader compilation can stall while the page is hidden; don't let it block boot forever.
+  try { await Promise.race([G.renderer.compileAsync(G.scene, G.camera), new Promise(r => setTimeout(r, 2500))]); }
+  catch (e) { try { G.renderer.compile(G.scene, G.camera); } catch (e2) { /* ignore */ } }
   renderFrame(0.016);
   unwarmEnemies();
   setLoading(1, 'READY');

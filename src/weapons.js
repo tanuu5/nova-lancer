@@ -29,10 +29,10 @@ const LASER_COL = [[0.5, 3.2, 0.9], [0.5, 3.2, 0.9], [0.8, 1.6, 4.5]];
 export const WSTATE = { fireCool: 0, holdT: 0, charge: 0, charged: false, lock: null, lockT: 0, chargeLoop: null, bomb: null, lastShot: 0, hitMark: 0, hitKill: false };
 
 function spawnLaser(from, dir, level, inherit) {
-  const speed = 950;
+  const speed = 620;
   lasers.push({
-    p: from.clone(), prev: from.clone(), v: dir.clone().multiplyScalar(speed).add(inherit),
-    life: 0.75, level, dmg: level === 2 ? 2 : 1, r: level === 2 ? 1.5 : 1.0, len: level === 2 ? 16 : 13,
+    p: from.clone(), prev: from.clone(), origin: from.clone(), v: dir.clone().multiplyScalar(speed).add(inherit),
+    life: 1.0, level, dmg: level === 2 ? 2 : 1, r: level === 2 ? 1.5 : 1.0, len: level === 2 ? 48 : 42,
   });
 }
 
@@ -92,8 +92,12 @@ function updateLasers(dt) {
     if (dead) { lasers.splice(i, 1); continue; }
     const c = LASER_COL[L.level];
     _v.copy(L.v).normalize();
-    _v2.copy(L.p).addScaledVector(_v, -L.len);
-    beam(_v2, L.p, L.level === 2 ? 0.55 : 0.42, c[0], c[1], c[2]);
+    // The bolt flies away from the chase camera, so it is heavily foreshortened: draw a long streak
+    // (never reaching back past the muzzle) plus a bright head so it still reads at a distance.
+    const len = Math.min(L.len, L.p.distanceTo(L.origin));
+    _v2.copy(L.p).addScaledVector(_v, -len);
+    beam(_v2, L.p, L.level === 2 ? 1.0 : 0.8, c[0], c[1], c[2]);
+    glow(L.p, L.level === 2 ? 4.0 : 3.4, c[0] * 0.75, c[1] * 0.75, c[2] * 0.75, 1);
   }
 }
 
