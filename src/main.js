@@ -16,7 +16,7 @@ import { initWingmen, resetWingmen, updateWingmen, updateWingmenTrails, setWingM
 import { initBoss, BOSS } from './boss.js';
 import { initLevel, startLevel, updateLevel } from './level.js';
 import {
-  initHUD, showScreen, hideScreens, hudVisible, updateHUD, radio, clearRadio, tip, banner, hideBanner, warning, bossBar,
+  initHUD, showScreen, hideScreens, hudVisible, updateHUD, radio, clearRadio, tip, clearTip, banner, hideBanner, warning, bossBar,
   setBossHP, popText, MENU_CB, titlePressed, titleReset, updateMenus, menuBack, refreshTitle, setLoading, showResults,
   updateResults, skipResults, resetHUDCache, setGameOverText, clearMarkers,
 } from './hud.js';
@@ -269,7 +269,7 @@ function setupStage(d, intro) {
   clearTimers();
   clearEnemies(); clearWeapons(); clearFX(); clearRadio(); clearMarkers();
   if (BOSS.inst.active) BOSS.inst.stop();
-  bossBar(false); warning(false); hideBanner();
+  bossBar(false); warning(false); hideBanner(); clearTip();
   if (G.warnLoop) { G.warnLoop.stop(0.2); G.warnLoop = null; }
   G.rail.d = d;
   G.rail.speed = 100;

@@ -50,9 +50,9 @@
   #g-boost .g-bar { height: 8px; width: clamp(110px, 16vw, 190px); }
   #g-boost .g-fill { background: linear-gradient(90deg, #ffb13d, #ffe27a); box-shadow: 0 0 10px rgba(255,200,80,.7); }
   #g-boost.hot .g-fill { background: linear-gradient(90deg, #ff4d2d, #ff9a3d); }
-  .gold { display: flex; gap: 6px; margin-left: 66px; }
-  .gold i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 194, 74, .45); box-sizing: border-box; }
-  .gold i.on { border-color: var(--amber); background: radial-gradient(circle, #fff3c4 0 20%, #ffc24a 45%, #b87a10 100%); box-shadow: 0 0 10px rgba(255,194,74,.9); }
+  .gold-rings { display: flex; gap: 6px; margin-left: 66px; }
+  .gold-rings i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 194, 74, .45); box-sizing: border-box; }
+  .gold-rings i.on { border-color: var(--amber); background: radial-gradient(circle, #fff3c4 0 20%, #ffc24a 45%, #b87a10 100%); box-shadow: 0 0 10px rgba(255,194,74,.9); }
   .lives { font: 600 13px/1 var(--f-hud); color: var(--ink); margin-left: 66px; display: flex; align-items: center; gap: 6px; letter-spacing: .1em; }
   .lives svg { width: 22px; height: 14px; }
   .hits-label { font: 600 11px/1 var(--f-hud); letter-spacing: .3em; color: var(--hud); }
@@ -107,6 +107,7 @@
     filter: drop-shadow(0 0 16px rgba(80,190,255,.55)); font-style: italic; }
   #banner .b-sub { font: 700 clamp(13px, 1.8vw, 18px)/1.3 var(--f-jp); letter-spacing: .3em; color: #dff5ff; }
   #banner .b-line { height: 1px; width: min(520px, 70vw); margin: 12px auto; background: linear-gradient(90deg, transparent, var(--hud), transparent); }
+  /* Variants are set with banner(..., cls); a bare class rule with the same name (like the HUD's old .gold) also restyles the banner itself. */
   #banner.gold .b-big { background: linear-gradient(180deg, #fffbe8 0%, #ffe39a 48%, #ffae2a 52%, #fff2c8 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 18px rgba(255,180,60,.6)); }
   #banner.boss .b-big { background: linear-gradient(180deg, #ffffff 0%, #ffd3da 46%, #ff2d45 52%, #ff9aa8 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 20px rgba(255,40,70,.65)); letter-spacing: .14em; }
   #banner.boss .b-small { color: #ff6a7a; text-shadow: 0 0 10px rgba(255,60,90,.8); }
@@ -166,6 +167,19 @@
   .keys dt kbd, .tip-k { display: inline-block; min-width: 20px; text-align: center; padding: 3px 6px; margin: 1px 2px; border: 1px solid var(--edge); border-bottom-width: 2px; border-radius: 3px; background: rgba(127,231,255,.07); font: 600 11px/1 var(--f-hud); }
   .keys dd { margin: 0; color: var(--dim); font-weight: 400; line-height: 1.45; }
   .keys dd b { color: var(--ink); font-weight: 700; }
+  .keys > div { display: contents; }
+  .t-key { display: inline-grid; place-items: center; min-width: 40px; height: 26px; padding: 0 9px; margin: 1px 2px; box-sizing: border-box; border-radius: 13px; vertical-align: middle;
+    border: 1.5px solid rgba(127,231,255,.5); background: rgba(10,30,60,.45); font: 700 10px/1 var(--f-hud); letter-spacing: .1em; color: #dff5ff; }
+  .t-key.fire { border-color: rgba(180,255,106,.8); color: var(--lime); }
+  .k-head { font: 700 12px/1.4 var(--f-jp); letter-spacing: .2em; color: var(--hud); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--hud-dim); }
+  .keys + .k-head { margin-top: 20px; }
+  .only-touch { display: none; }
+  body.touch .only-touch { display: block; }
+  body.touch .keys > .no-touch { display: none; }
+  /* Title and back button stay in place; only the body scrolls when the panel is taller than the screen. */
+  .panel.p-split { display: flex; flex-direction: column; overflow: hidden; }
+  .p-split > .p-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; margin-right: -12px; padding-right: 12px; }
+  .p-split > .p-actions { flex: none; }
   .p-note { margin-top: 16px; font-size: 12px; color: var(--dim); line-height: 1.6; }
   .p-actions { margin-top: 18px; display: grid; gap: 4px; }
   .set-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; }
@@ -208,7 +222,7 @@
     .g-label { width: 44px; font-size: 9px; }
     .g-bar { width: clamp(110px, 34vw, 200px); }
     #g-boost .g-bar { width: clamp(80px, 26vw, 150px); }
-    .gold, .lives { margin-left: 54px; }
+    .gold-rings, .lives { margin-left: 54px; }
     .hits { font-size: 34px; }
     #radio { width: calc(100vw - 2 * var(--gutter)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     body.touch #radio { bottom: auto; top: calc(104px + env(safe-area-inset-top, 0px)); }
@@ -218,6 +232,21 @@
     body.touch #boss { top: calc(214px + env(safe-area-inset-top, 0px)); width: calc(100vw - 32px); }
     .panel { padding: 20px 18px; }
     .keys { font-size: 12px; }
+  }
+  @media (max-width: 600px) {
+    /* Too narrow for keys and description side by side: stack each entry, description first. */
+    .keys:not(.k-compact) { grid-template-columns: 1fr; gap: 0; }
+    .keys:not(.k-compact) > div { display: grid; gap: 6px; padding: 9px 0; border-top: 1px solid rgba(127,231,255,.12); }
+    .keys:not(.k-compact) > div:first-child { border-top: 0; padding-top: 0; }
+    .keys:not(.k-compact) dt { white-space: normal; }
+    .keys:not(.k-compact) dd { order: -1; }
+    .keys:not(.k-compact) > .k-label dd { order: 0; }
+    .k-compact { gap: 10px 12px; }
+  }
+  @media (max-height: 480px) {
+    .panel { padding-top: 16px; padding-bottom: 16px; }
+    .p-sub { margin-bottom: 10px; }
+    .p-actions { margin-top: 10px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .press, #warning.on, .hits.pop, #title .logo, #title .logo .l2 { animation: none; }
@@ -231,7 +260,7 @@
     <div class="hud-tl">
       <div class="g-row" id="g-shield"><div class="g-label">SHIELD</div><div class="g-bar"><div class="g-ghost"></div><div class="g-fill"></div><div class="g-ticks"></div></div></div>
       <div class="g-row" id="g-boost"><div class="g-label">BOOST</div><div class="g-bar"><div class="g-fill"></div></div></div>
-      <div class="gold" id="gold" aria-label="ゴールドリング"><i></i><i></i><i></i></div>
+      <div class="gold-rings" id="gold" aria-label="ゴールドリング"><i></i><i></i><i></i></div>
       <div class="lives" id="lives"></div>
     </div>
     <div class="hud-tr">
@@ -288,22 +317,37 @@
 
   <section id="controls" class="screen">
     <div class="scrim"></div>
-    <div class="panel">
+    <div class="panel p-split">
       <h2 class="p-title">CONTROLS</h2>
       <div class="p-sub">操作方法</div>
-      <dl class="keys">
-        <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></dt><dd><b>移動</b></dd>
-        <dt><kbd>J</kbd> / <kbd>Space</kbd> / <kbd>Z</kbd></dt><dd><b>ショット</b>　長押しでチャージ → ロックオンして発射</dd>
-        <dt><kbd>K</kbd> / <kbd>B</kbd> / <kbd>X</kbd></dt><dd><b>スマートボム</b>　もう一度押すと即起爆</dd>
-        <dt><kbd>L</kbd> / <kbd>Shift</kbd> / <kbd>C</kbd></dt><dd><b>ブースト</b></dd>
-        <dt><kbd>I</kbd> / <kbd>V</kbd></dt><dd><b>ブレーキ</b></dd>
-        <dt><kbd>Q</kbd> <kbd>E</kbd> ×2</dt><dd><b>ローリング</b>　素早く2回押す。敵弾をはじく。押し続けると機体を傾けて鋭く旋回</dd>
-        <dt><kbd>Esc</kbd> / <kbd>P</kbd></dt><dd><b>ポーズ</b></dd>
-        <dt>マウス</dt><dd>左クリック：ショット／右クリック：ボム</dd>
-        <dt>ゲームパッド</dt><dd>スティック：移動　A：ショット　B：ボム　R2：ブースト　L2：ブレーキ　L1/R1 ×2：ローリング</dd>
-        <dt>タッチ</dt><dd>画面左下をドラッグで移動、右下のボタンでショット・ボム・ブースト・ブレーキ・ローリング</dd>
-      </dl>
-      <p class="p-note">リングを通過するとシールド回復。ゴールドリングを3つ集めるとシールド最大値アップ。敵を撃墜して HITS を稼ごう。</p>
+      <div class="p-body">
+        <div class="only-touch">
+          <h3 class="k-head">タッチ操作</h3>
+          <dl class="keys k-compact">
+            <div><dt>画面の左下をドラッグ</dt><dd><b>移動</b></dd></div>
+            <div><dt><span class="t-key fire">FIRE</span></dt><dd><b>ショット</b>　長押しでチャージ → ロックオンして発射</dd></div>
+            <div><dt><span class="t-key">BOMB</span></dt><dd><b>スマートボム</b>　もう一度押すと即起爆</dd></div>
+            <div><dt><span class="t-key">BOOST</span></dt><dd><b>ブースト</b></dd></div>
+            <div><dt><span class="t-key">BRAKE</span></dt><dd><b>ブレーキ</b></dd></div>
+            <div><dt><span class="t-key">ROLL◀</span><span class="t-key">▶ROLL</span> ×2</dt><dd><b>ローリング</b>　素早く2回押す。敵弾をはじく。押し続けると機体を傾けて鋭く旋回</dd></div>
+            <div><dt><span class="t-key">II</span></dt><dd><b>ポーズ</b></dd></div>
+          </dl>
+          <h3 class="k-head">キーボード・マウス・ゲームパッド</h3>
+        </div>
+        <dl class="keys">
+          <div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></dt><dd><b>移動</b></dd></div>
+          <div><dt><kbd>J</kbd> / <kbd>Space</kbd> / <kbd>Z</kbd></dt><dd><b>ショット</b>　長押しでチャージ → ロックオンして発射</dd></div>
+          <div><dt><kbd>K</kbd> / <kbd>B</kbd> / <kbd>X</kbd></dt><dd><b>スマートボム</b>　もう一度押すと即起爆</dd></div>
+          <div><dt><kbd>L</kbd> / <kbd>Shift</kbd> / <kbd>C</kbd></dt><dd><b>ブースト</b></dd></div>
+          <div><dt><kbd>I</kbd> / <kbd>V</kbd></dt><dd><b>ブレーキ</b></dd></div>
+          <div><dt><kbd>Q</kbd> <kbd>E</kbd> ×2</dt><dd><b>ローリング</b>　素早く2回押す。敵弾をはじく。押し続けると機体を傾けて鋭く旋回</dd></div>
+          <div><dt><kbd>Esc</kbd> / <kbd>P</kbd></dt><dd><b>ポーズ</b></dd></div>
+          <div class="k-label"><dt>マウス</dt><dd>左クリック：ショット／右クリック：ボム</dd></div>
+          <div class="k-label"><dt>ゲームパッド</dt><dd>スティック：移動　A：ショット　B：ボム　R2：ブースト　L2：ブレーキ　L1/R1 ×2：ローリング</dd></div>
+          <div class="k-label no-touch"><dt>タッチ</dt><dd>画面左下をドラッグで移動、右下のボタンでショット・ボム・ブースト・ブレーキ・ローリング</dd></div>
+        </dl>
+        <p class="p-note">リングを通過するとシールド回復。ゴールドリングを3つ集めるとシールド最大値アップ。敵を撃墜して HITS を稼ごう。</p>
+      </div>
       <div class="p-actions"><button class="mi sel" data-act="back"><span>戻る</span><span class="en">BACK</span></button></div>
     </div>
   </section>

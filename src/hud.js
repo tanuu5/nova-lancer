@@ -282,12 +282,16 @@ function updateRadio(dt) {
 export function radioBusy() { return !!rcur || radioQ.length > 0; }
 
 // ============================================================ Tips / banners / warning / boss bar
-let tipT = 0;
+let tipT = 0, tipWait = null;
 // `touchHtml` replaces keyboard hints on touch devices (keyboard-only hints are skipped there).
 export function tip(html, dur = 5, touchHtml) {
   if (Input.touchEnabled) { if (touchHtml === undefined && html.includes('<kbd>')) return; if (touchHtml) html = touchHtml; }
-  EL.tip.innerHTML = html; EL.tip.classList.add('on'); tipT = dur;
+  // On short or narrow screens the tip lands on top of the banner, so it waits until the banner has faded out.
+  if (bannerT > 0) { tipWait = { html, dur, gap: 0.5 }; return; }
+  showTip(html, dur);
 }
+function showTip(html, dur) { EL.tip.innerHTML = html; EL.tip.classList.add('on'); tipT = dur; }
+export function clearTip() { EL.tip.classList.remove('on'); tipT = 0; tipWait = null; }
 let bannerT = 0;
 export function banner(small, big, sub = '', dur = 3.2, cls = '') {
   const b = EL.banner;
@@ -331,6 +335,7 @@ export function updateHUD(dt, rdt) {
   updateRadio(dt);
   if (tipT > 0) { tipT -= rdt; if (tipT <= 0) EL.tip.classList.remove('on'); }
   if (bannerT > 0) { bannerT -= rdt; if (bannerT <= 0) EL.banner.classList.remove('on'); }
+  else if (tipWait && (tipWait.gap -= rdt) <= 0) { showTip(tipWait.html, tipWait.dur); tipWait = null; }
   if (!run || !EL.hud.classList.contains('on')) return;
   // gauges
   const sh = Math.round(run.shield * 10) / 10;
