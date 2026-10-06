@@ -1,6 +1,6 @@
 // HUD (DOM + 2D canvas overlay), radio comms, banners, menus and touch controls.
 import * as THREE from 'three';
-import { G, clamp, lerp, DIFF, saveSettings, TAU } from './core.js';
+import { G, clamp, lerp, DIFF, saveSettings, TAU, emit } from './core.js';
 import { Input } from './input.js';
 import { AudioSys } from './audio.js';
 import { portraitSVG, CHARACTERS } from './portraits.js';
@@ -241,6 +241,7 @@ function startRadio(m) {
   m.shown = 0; m.t = 0; m.typeT = 0; m.mouthT = 0; m.blinkT = 1 + Math.random() * 2; m.state = 'open';
   AudioSys.sfx('radio', { vol: 0.6 });
   rcur = m;
+  emit('radioStart', m.who);
 }
 
 function updateRadio(dt) {

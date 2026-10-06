@@ -4,11 +4,12 @@ import { G, rand, clamp, emit, on, after } from './core.js';
 import { spawnEnemy, wave, makeGroup } from './enemies.js';
 import { scheduleProp, clearSchedule, resetProps, spawnProp } from './props.js';
 import { radio, tip, banner, warning, bossBar, addMarker, clearMarkers } from './hud.js';
-import { WING, setWingMode } from './wingmen.js';
+import { WING, setWingMode, setWingStance, holdOut } from './wingmen.js';
 import { BOSS } from './boss.js';
 import { AudioSys } from './audio.js';
 
 export const CHECKPOINTS = [0, 6100, 10700];
+const WING_REAR_AT = 640;   // the wingmen fly in front until here, then mostly behind the camera
 const EVENTS = [];
 const at = (d, fn) => EVENTS.push({ d, fn });
 let idx = 0;
@@ -53,6 +54,7 @@ function buildScript() {
   at(120, () => radio('hou', 'こちらホウ司令。ランサー隊、アクエリア沿岸に敵の侵攻部隊を確認した。全機、迎撃に向かえ！', { hold: 2.2 }));
   at(520, () => radio('kota', 'よーし、いっくぞー！　隊長、しっかりついてくからね！'));
   at(330, () => tip(`${K('W')}${K('A')}${K('S')}${K('D')} / 矢印キー：移動　${K('J')} / ${K('Space')}：ショット`, 6, '左下をドラッグで移動 ／ FIRE でショット'));
+  at(WING_REAR_AT, () => setWingStance('rear', 0.5));   // after Kota's "I'll stick with you": the squadron drops back to cover the leader
   at(700, () => { vWing('dart', 5, 760, 20, { noFire: true }); });
   at(820, () => radio('gantetsu', '前方に敵編隊。落ち着いて、一機ずつ確実に落とせ。'));
   at(1250, () => snake('dart', 5, 720, 18, 20));
@@ -153,6 +155,7 @@ function rescueKota() {
     resolved = true;
     marker.active = false;
     kota.mode = 'formation'; kota.modeT = 0; kota.barrelRoll();
+    holdOut(kota, 5);
     if (group.byPlayer > 0) { G.run.savedKota = true; emit('bonus', 3000, kota.pos.clone(), 'RESCUE +3000'); }
     radio('kota', '助かったぁ！　隊長、恩に着るよ！', { prio: 1 });
   });
@@ -184,6 +187,7 @@ export function initLevel() {
 }
 
 export function startLevel(fromD) {
+  setWingStance(fromD < WING_REAR_AT ? 'front' : 'rear');
   idx = 0;
   while (idx < EVENTS.length && EVENTS[idx].d < fromD) idx++;
   resetProps(fromD);

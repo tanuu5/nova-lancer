@@ -12,7 +12,7 @@ import { PlayerShip, updateCamera, resetCamera, CAM } from './ship.js';
 import { updatePlayerWeapons, updateEnemyBullets, clearWeapons, resetCharge, WSTATE, ebullets } from './weapons.js';
 import { updateEnemies, clearEnemies, warmEnemies, unwarmEnemies, enemies } from './enemies.js';
 import { initProps, updateProps, spawnProp } from './props.js';
-import { initWingmen, resetWingmen, updateWingmen, updateWingmenTrails, setWingMode, WING } from './wingmen.js';
+import { initWingmen, resetWingmen, updateWingmen, updateWingmenTrails, setWingMode, setWingStance, sortieAll, WING } from './wingmen.js';
 import { initBoss, BOSS } from './boss.js';
 import { initLevel, startLevel, updateLevel } from './level.js';
 import {
@@ -339,6 +339,7 @@ function startBoss() {
   B.start();
   AudioSys.playMusic('boss', { fade: 0.2 });
   setWingMode('boss');
+  sortieAll(1.8, 8);            // the squadron overtakes the leader as the boss surfaces
   S.bossCine = { t: 0 };
   POST.letterbox = 1;
   radio('mizuchi', '……侵入者ヲ確認。排除スル。', { prio: 2, hold: 1.2 });
@@ -362,6 +363,7 @@ function startClear() {
   after(1.5, () => radio('gantetsu', '見事な腕だ。……帰還するぞ。'));
   after(1.6, () => radio('hou', 'よくやった、ランサー隊。アクエリアは守られた。', { hold: 2.4 }));
   WING.list.forEach((w, i) => after(2.4 + i * 0.35, () => { if (!w.gone) { w.barrelRoll(); AudioSys.sfx('roll', { vol: 0.5, pan: i - 1 }); } }));
+  setWingStance('front');
   for (const w of WING.list) {
     if (w.id === 'kota' && G.run.kotaLost) continue;
     w.reset(); w.show(); w.mode = 'formation';

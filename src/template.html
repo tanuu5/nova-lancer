@@ -153,8 +153,15 @@
   .mi.sel { color: #fff; background: linear-gradient(90deg, rgba(63,184,255,.28), rgba(63,184,255,0)); padding-left: 26px; }
   .mi.sel::before { content: ''; position: absolute; left: 8px; top: 50%; width: 8px; height: 8px; margin-top: -4px; background: var(--hud); transform: rotate(45deg); box-shadow: 0 0 10px var(--hud); }
   .mi:focus-visible { outline: 1px solid var(--hud); outline-offset: 2px; }
-  .t-foot { position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  .t-foot { position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 6px 16px;
     font: 600 11px/1.4 var(--f-hud); letter-spacing: .2em; color: rgba(200, 225, 245, .65); }
+  .t-foot > :last-child { justify-self: end; text-align: right; }
+  .t-copy { justify-self: center; white-space: nowrap; }
+  .t-copy span { font-family: var(--f-jp); font-weight: 700; letter-spacing: .14em; }   /* Oxanium's square © reads like 回 at this size */
+  @media (max-width: 640px) {
+    .t-foot { display: flex; flex-wrap: wrap; justify-content: space-between; }
+    .t-copy { order: 1; margin-left: auto; }
+  }
   .t-best b { color: var(--amber); font-weight: 600; }
 
   .panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100vw - 32px)); max-height: calc(100% - 40px); overflow: auto;
@@ -312,7 +319,7 @@
         <button class="mi" data-act="settings"><span>設定</span><span class="en">SETTINGS</span></button>
       </div>
     </div>
-    <div class="t-foot"><span class="t-best" id="best">BEST <b>0</b></span><span>MISSION 01 · AZURE COAST</span></div>
+    <div class="t-foot"><span class="t-best" id="best">BEST <b>0</b></span><span class="t-copy"><span>©</span> 2026 <span>たぬ</span></span><span>MISSION 01 · AZURE COAST</span></div>
   </section>
 
   <section id="controls" class="screen">

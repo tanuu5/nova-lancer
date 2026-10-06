@@ -332,13 +332,14 @@ export class Enemy {
     const toP = _v.subVectors(P.pos, this.pos);
     const dist = toP.length();
     if (this.def.proximity && P.alive && dist < this.def.proximity) { P.damage(12); this.kill('self'); return; }
-    // collide with player
-    if (P.alive && !this.def.ground && dist < this.radius + 2.2 && this.type !== 'gunship') {
+    // collide with player (chasers overtaking from behind the camera can't be seen, so they don't ram)
+    const unseen = this.patternName === 'chase' && this.s < G.rail.d + 10;
+    if (P.alive && !this.def.ground && !unseen && dist < this.radius + 2.2 && this.type !== 'gunship') {
       if (P.damage(14)) { this.hit(99, this.pos, 'ram'); return; }
     } else if (P.alive && this.type === 'gunship' && dist < this.radius) { P.damage(18); }
     this.tryFire(dt, dist);
-    // despawn when well behind the camera
-    if (this.s < G.rail.d - 60 && this.t > 1) this.remove();
+    // despawn when well behind the camera (chasers start back there with the wingman they're tailing)
+    if (this.s < G.rail.d - (this.patternName === 'chase' ? 200 : 60) && this.t > 1) this.remove();
     // glow accents
     if (this.type === 'carrier') glow(this.pos, 6 + Math.sin(this.t * 6) * 1, 0.4, 2.2, 3, 0.6);
     // damaged heavies trail smoke and sparks
