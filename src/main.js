@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import {
   G, loadSettings, saveSettings, newRun, updateTimers, clearTimers, on, emit, clamp, lerp, damp,
-  loadBest, saveBest, easeInOutCubic, easeOutCubic, rand, after, mulberry32,
+  easeInOutCubic, easeOutCubic, rand, after, mulberry32,
 } from './core.js';
 import { initInput, updateInput, endInputFrame, Input } from './input.js';
 import { initRenderer, createSky, createLights, makeTextures, renderFrame, updatePost, updateLights, POST, applyQuality, ATMO, GFX } from './gfx.js';
@@ -15,10 +15,14 @@ import { initProps, updateProps, spawnProp } from './props.js';
 import { initWingmen, resetWingmen, updateWingmen, updateWingmenTrails, setWingMode, setWingStance, sortieAll, WING } from './wingmen.js';
 import { initBoss, useBoss, BOSS } from './boss.js';
 import { initLevel, loadStageScript, startLevel, updateLevel } from './level.js';
-import { STAGES } from './stages/index.js';
+import { STAGES, MISSIONS, PROLOGUE } from './stages/index.js';
+import { CAMP, freshCarry, progress, saveProgress, saveStoryPoint, recordClear, markSeen, encodePassword } from './campaign.js';
+import {
+  initScreens, updateScreens, screenActive, closeScreens, openBriefing, openTalk, openStory, openTbc, openSelect, openChars, openPassword,
+} from './screens.js';
 import {
   initHUD, showScreen, hideScreens, hudVisible, updateHUD, radio, clearRadio, tip, clearTip, banner, hideBanner, warning, bossBar,
-  setBossHP, popText, MENU_CB, titlePressed, titleReset, updateMenus, menuBack, refreshTitle, setLoading, showResults,
+  setBossHP, popText, MENU_CB, titlePressed, titleReset, updateMenus, menuBack, refreshTitle, showTitleMenu, setLoading, showResults,
   updateResults, skipResults, resetHUDCache, setGameOverText, clearMarkers,
 } from './hud.js';
 import { AudioSys } from './audio.js';
@@ -28,7 +32,6 @@ const nextFrame = () => new Promise(r => { let done = false; const f = () => { i
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _p = new THREE.Vector3(), _f = new THREE.Vector3(), _r = new THREE.Vector3();
 
 let ship = null;
-let best = null;
 const S = { t: 0, phase: '', fadeTo: null };   // per-state scratch
 let CUR = null;                                // the stage definition being played (the title flies over the first one)
 
@@ -43,9 +46,9 @@ function useStage(def) {
 // ============================================================ Boot
 async function boot() {
   G.settings = loadSettings();
-  best = loadBest();
   const app = document.getElementById('app');
   initHUD();
+  initScreens();
   setLoading(0.05, 'RENDERER');
   await nextFrame();
   initRenderer(app);
@@ -95,6 +98,7 @@ async function boot() {
     G, BOSS, WING, ship, emit, Input, POST, GFX, THREE,
     __jump: (d) => { G.run = G.run || newRun(); hideScreens(); setupStage(d, false); },
     __start: () => startMission(),
+    CAMP, progress,
     __step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) frame(dt); return { state: G.state, d: Math.round(G.rail.d), hits: G.run.hits, shield: G.run.shield }; },
     enemies, WSTATE, ebullets, explode,
     __key: (code, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code })),
@@ -249,12 +253,23 @@ function wireEvents() {
   });
   on('bombUsed', () => once('bomb', () => radio('kota', 'ボムだー！　どっかーん！')));
 
-  MENU_CB.start = () => startMission();
+  on('radioStart', (who) => markSeen(who));   // the character page unlocks whoever has been on the radio
+
+  MENU_CB.story = (act) => {
+    if (act === 'continue') continueStory();
+    else if (act === 'new') newStory();
+    else if (act === 'password') { AudioSys.sfx('uiSelect'); openPassword(passwordOk, () => showTitleMenu('story', 'password')); }
+    else if (act === 'prologue') { AudioSys.sfx('uiSelect'); openStory('PROLOGUE', PROLOGUE, () => showTitleMenu('story', 'prologue')); }
+  };
+  MENU_CB.select = () => openSelectScreen();
+  MENU_CB.chars = () => openChars((id) => { S.focus = id; }, () => { S.focus = null; closeScreens(); showTitleMenu('main', 'chars'); });
   MENU_CB.resume = () => resume();
   MENU_CB.retry = () => { resume(); hideScreens(); respawn(true); };
   MENU_CB.quit = () => { resume(); hideScreens(); enterTitle(false); };
   MENU_CB.continue = () => { G.run.score = 0; G.run.lives = 3; G.run.continues++; G.run.hits = 0; hideScreens(); respawn(true); };
   MENU_CB.again = () => startMission();
+  MENU_CB.next = () => afterResults();
+  MENU_CB.toSelect = () => { hideScreens(); enterTitle(false); openSelectScreen(); };
   MENU_CB.pause = () => pause();
   MENU_CB.quality = (q) => applyQuality(q);
 }
@@ -287,8 +302,9 @@ function enterTitle(first) {
   POST.letterbox = 0;
   POST.fade = first ? 1 : POST.fade;
   S.t = 0;
-  best = loadBest();
-  refreshTitle(best);
+  S.focus = null;
+  closeScreens();
+  refreshTitleInfo();
   showScreen('title');
   titleReset();
   if (AudioSys.ready) { titlePressed(); AudioSys.playMusic('title', { fade: 1.2 }); }
@@ -299,13 +315,93 @@ function enterTitle(first) {
 const TITLE_SLOTS = { kota: { ds: -70, u: 34, v: 38 }, gantetsu: { ds: -90, u: -20, v: 33 }, rio: { ds: -120, u: 10, v: 46 } };
 function titleFormation() { for (const w of WING.list) w.override = TITLE_SLOTS[w.id]; }
 
+const pad2 = (n) => String(n).padStart(2, '0');
+function refreshTitleInfo() {
+  const P = progress(), st = P.story;
+  refreshTitle({
+    best: P.best.azure || null,
+    canSelect: MISSIONS.some(m => m.def && P.cleared[m.id]),
+    cont: st ? { label: `MISSION ${pad2(st.stage + 1)}${MISSIONS[st.stage]?.def ? '' : '（準備中）'}` } : null,
+    hasSave: !!st,
+    footR: st ? `STORY · MISSION ${pad2(st.stage + 1)}` : 'MISSION 01 · AZURE COAST',
+  });
+}
+
+// ============================================================ Story flow
+// title → (prologue) → briefing → mission → results → talk → next briefing … or "to be continued"
+function newStory() {
+  AudioSys.sfx('uiSelect');
+  CAMP.mode = 'story'; CAMP.stage = 0; CAMP.carry = freshCarry(G.settings.difficulty);
+  S.bg = 'attract';
+  const P = progress();
+  if (P.seen.prologue) { briefingFor(0); return; }
+  P.seen.prologue = true; saveProgress();
+  openStory('PROLOGUE', PROLOGUE, () => briefingFor(0));
+}
+function continueStory() {
+  const st = progress().story;
+  if (!st) return;
+  AudioSys.sfx('uiSelect');
+  CAMP.mode = 'story'; CAMP.stage = st.stage; CAMP.carry = { ...st.carry };
+  S.bg = 'attract';
+  briefingFor(st.stage);
+}
+function passwordOk(res) {
+  CAMP.mode = 'story'; CAMP.stage = res.stage; CAMP.carry = res.carry;
+  S.bg = 'attract';
+  setTimeout(() => { if (screenActive() === 'password') briefingFor(res.stage); }, 700);   // let the OK message show
+}
+function openSelectScreen() {
+  openSelect((no) => { CAMP.mode = 'select'; CAMP.stage = no - 1; S.bg = 'attract'; briefingFor(no - 1); },
+    () => { closeScreens(); showTitleMenu('main', 'select'); });
+}
+// Briefing for mission index i (story: also the save point and the password for this point).
+function briefingFor(i) {
+  const def = MISSIONS[i]?.def;
+  if (!def) { tbcFor(i); return; }
+  const story = CAMP.mode === 'story';
+  if (story) saveStoryPoint(i, CAMP.carry);
+  G.state = 'briefing';
+  openBriefing(def, {
+    password: story ? encodePassword(i, CAMP.carry) : null,
+    onSortie: () => startMission(),
+    onBack: () => {
+      if (S.bg !== 'attract') { hideScreens(); enterTitle(false); return; }
+      G.state = 'title'; closeScreens(); refreshTitleInfo();
+      if (story) showTitleMenu('story', 'continue'); else openSelectScreen();
+    },
+  });
+}
+function tbcFor(i) {
+  const afterClear = G.state === 'talk';
+  G.state = 'tbc';
+  openTbc(i + 1, CAMP.mode === 'story' ? encodePassword(i, CAMP.carry) : null, () => { hideScreens(); enterTitle(false); }, afterClear);
+}
+function afterResults() {
+  hideScreens();
+  G.state = 'talk';
+  S.bg = 'clear';
+  fadeTo(0, 0.8);   // the results dimmed the scene
+  if (CAMP.mode === 'story' && CUR.talk?.length) openTalk(CUR.talk, () => briefingFor(CAMP.stage));
+  else briefingFor(CAMP.stage);
+}
+function applyCarry(run, c) {
+  run.lives = c.lives; run.bombs = c.bombs; run.laser = c.laser;
+  if (c.max140) run.maxShield = run.shield = 140;
+  run.frags = c.frags; run.squad = c.squad;
+}
+
 function startMission() {
   if (S.transition) return;
   S.transition = true;
-  hideScreens();
+  hideScreens(); closeScreens();
   fadeTo(1, 0.6, () => {
     S.transition = false;
-    G.run = newRun(G.settings.difficulty);
+    const def = MISSIONS[CAMP.stage].def;
+    if (CUR !== def) useStage(def);
+    const story = CAMP.mode === 'story';
+    G.run = newRun(story ? CAMP.carry.diff : G.settings.difficulty);
+    if (story) applyCarry(G.run, CAMP.carry);
     G.run.startTime = G.time;
     setupStage(0, true);
   });
@@ -313,7 +409,7 @@ function startMission() {
 
 // Prepare the world for play starting at distance d
 function setupStage(d, intro) {
-  hideScreens();
+  hideScreens(); closeScreens();
   G.state = 'play';
   G.paused = false;
   G.slowMo = 1;
@@ -440,12 +536,23 @@ function finishRun() {
     { label: 'LIFE BONUS', value: lifeBonus, note: `×${run.lives}` },
     { label: 'NO MISS', value: nomiss },
   ];
-  const isBest = total > (best?.score || 0);
-  const meta = `命中率 <b>${acc}%</b>　リング <b>${run.rings}</b>　タイム <b>${mm}:${String(ss).padStart(2, '0')}</b><br>${CUR.resultNote?.(run) ?? ''}${isBest ? '　<b>NEW RECORD!</b>' : ''}`;
-  if (isBest) { best = { score: total, hits: run.hits, rank }; saveBest(best); }
+  const isBest = recordClear(CUR.id, { score: total, hits: run.hits, rank, medal });
+  let storyLine = '';
+  if (CAMP.mode === 'story') {
+    // carry the squad's state into the next mission and move the story save point there
+    const c = CAMP.carry;
+    CAMP.carry = {
+      diff: c.diff, lives: run.lives, bombs: run.bombs, laser: run.laser, max140: run.maxShield >= 140,
+      score: c.score + total, frags: (run.frags || 0) | c.frags, squad: CUR.squadAfter ? CUR.squadAfter(run, c.squad) : c.squad,
+    };
+    CAMP.stage += 1;
+    saveStoryPoint(CAMP.stage, CAMP.carry);
+    storyLine = `<br>ストーリー合計 <b>${CAMP.carry.score.toLocaleString()}</b>`;
+  }
+  const meta = `命中率 <b>${acc}%</b>　リング <b>${run.rings}</b>　タイム <b>${mm}:${String(ss).padStart(2, '0')}</b><br>${CUR.resultNote?.(run) ?? ''}${isBest ? '　<b>NEW RECORD!</b>' : ''}${storyLine}`;
   G.state = 'results';
   hudVisible(false);
-  showResults({ rows, total, rank, medal, meta, sub: CUR.resultSub });
+  showResults({ rows, total, rank, medal, meta, sub: CUR.resultSub, mode: CAMP.mode });
 }
 
 // ============================================================ Transitions
@@ -462,6 +569,8 @@ function updateFade(rdt) {
 // ============================================================ Cinematic cameras
 function titleCamera(dt) {
   const t = G.clock;
+  const focus = S.focus === 'player' ? ship : S.focus ? WING.byId[S.focus] : null;
+  if (focus && !focus.gone) { focusCamera(dt, focus.pos, t); return; }
   const a = 0.95 + Math.sin(t * 0.09) * 0.85;   // sweep between front-on and side-on views
   const o = CAM.override;
   railFrame(G.rail.d, _p, _f, _r);
@@ -473,6 +582,24 @@ function titleCamera(dt) {
   _v2.crossVectors(_v, THREE.Object3D.DEFAULT_UP).normalize();
   o.target.copy(ship.pos).addScaledVector(_v2, -8);
   o.fov = 50;
+}
+
+// Character page: orbit close around one ship, framed low and right of centre (the profile panel sits above it).
+// The camera offset is smoothed in the ship's own frame, so it never trails behind a ship that is flying on.
+const _focusOff = new THREE.Vector3();
+function focusCamera(dt, p, t) {
+  const o = CAM.override;
+  if (S.focusFor !== S.focus) { S.focusFor = S.focus; _focusOff.subVectors(o.pos, p); }
+  railFrame(G.rail.d, _p, _f, _r);
+  const a = 0.9 + t * 0.3, r = 19;
+  _v.set(0, 3, 0).addScaledVector(_r, Math.sin(a) * r).addScaledVector(_f, Math.cos(a) * r);
+  _focusOff.lerp(_v, 1 - Math.exp(-5 * dt));
+  o.pos.copy(p).add(_focusOff);
+  _v.subVectors(p, o.pos).normalize();
+  _v2.crossVectors(_v, THREE.Object3D.DEFAULT_UP).normalize();
+  o.target.copy(p).addScaledVector(_v2, -3.2);
+  o.target.y += 3.4;
+  o.fov = 46;
 }
 
 function introCamera(dt) {
@@ -579,6 +706,7 @@ function frame(rdt) {
 
   // global input
   if (G.state === 'title') updateTitle(rdt);
+  else if (G.state === 'briefing' || G.state === 'talk' || G.state === 'tbc') updateInterlude(dt, rdt);
   else if (G.state === 'play' || G.state === 'dead') updatePlay(dt, rdt);
   else if (G.state === 'clear') updateClear(dt, rdt);
   else if (G.state === 'gameover') {
@@ -615,13 +743,25 @@ function updateTitle(rdt) {
       AudioSys.playMusic('title', { fade: 1.0 });
       AudioSys.sfx('uiSelect');
     }
-  } else {
+  } else if (screenActive()) updateScreens(rdt);   // characters, mission select, password, prologue
+  else {
     if (Input.pressed('back') && menuBack()) { /* closed sub menu */ }
     else updateMenus();
   }
   if (S.fade == null && POST.fade > 0.99 && S.t === 0) fadeTo(0, 1.4);
   S.t += rdt;
-  // attract mode: gentle cruise over the sunset sea
+  attract(rdt);
+}
+
+// Briefing, talk and "to be continued" play over whatever was on screen: the title fly-through or the clear orbit.
+function updateInterlude(dt, rdt) {
+  if (S.bg === 'clear') { S.t += rdt; G.rail.d += G.rail.speed * dt; clearCamera(dt); simulate(dt, rdt, false); }
+  else attract(rdt);
+  updateScreens(rdt);
+}
+
+// attract mode: gentle cruise over the sunset sea
+function attract(rdt) {
   const t = G.clock;
   ship.autoPilot.u = Math.sin(t * 0.23) * 14;
   ship.autoPilot.v = 24 + Math.sin(t * 0.37) * 6;

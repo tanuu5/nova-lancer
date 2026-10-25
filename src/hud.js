@@ -14,7 +14,9 @@ let ctx, cw = 1, ch = 1, dpr = 1;
 export function initHUD() {
   for (const id of ['hud', 'hudc', 'g-shield', 'g-boost', 'gold', 'lives', 'hits', 'score', 'bombs', 'laserlv', 'boss', 'bossfill', 'bossghost', 'tip', 'radio', 'rface', 'rname', 'rtext',
     'banner', 'warning', 'title', 'press', 'mainmenu', 'diffval', 'best', 'controls', 'settings', 'pause', 'gameover', 'results', 'loading', 'loadfill', 'loadmsg',
-    'resgrid', 'restotal', 'rank', 'rankmeta', 'medal', 'touch', 'tstick', 'tknob', 'tpause', 'go-sub', 'bossen', 'bossja', 'ressub']) EL[id] = $(id);
+    'resgrid', 'restotal', 'rank', 'rankmeta', 'medal', 'touch', 'tstick', 'tknob', 'tpause', 'go-sub', 'bossen', 'bossja', 'ressub',
+    'briefing', 'talk', 'story', 'tbc', 'select', 'chars', 'password', 'storymenu', 'mi-select', 'mi-continue', 'contval', 'newhint', 'tfoot-r',
+    'res-next', 'res-again', 'res-select']) EL[id] = $(id);
   EL.shieldFill = EL['g-shield'].querySelector('.g-fill');
   EL.shieldGhost = EL['g-shield'].querySelector('.g-ghost');
   EL.shieldBar = EL['g-shield'].querySelector('.g-bar');
@@ -38,7 +40,7 @@ export function setLoading(frac, msg) {
 }
 
 // ============================================================ Screens
-const SCREENS = ['title', 'controls', 'settings', 'pause', 'gameover', 'results', 'loading'];
+const SCREENS = ['title', 'controls', 'settings', 'pause', 'gameover', 'results', 'loading', 'briefing', 'talk', 'story', 'tbc', 'select', 'chars', 'password'];
 export function showScreen(name) {
   for (const s of SCREENS) EL[s].classList.toggle('on', s === name);
   const menu = MENUS[name];
@@ -49,7 +51,7 @@ export function hideScreens() { for (const s of SCREENS) EL[s].classList.remove(
 export function hudVisible(on) { EL.hud.classList.toggle('on', on); if (!on) { ctx.clearRect(0, 0, EL.hudc.width, EL.hudc.height); } EL.touch.classList.toggle('on', on && Input.touchEnabled); }
 
 // ============================================================ Menus
-class Menu {
+export class Menu {
   constructor(el, handler) {
     this.el = el; this.handler = handler; this.i = 0;
     this.items = [...el.querySelectorAll('.mi')];
@@ -92,12 +94,15 @@ class Menu {
 
 const MENUS = {};
 let activeMenu = null;
-export const MENU_CB = {};  // set by main: start, resume, retry, quit, continue, again, back
+export const MENU_CB = {};  // set by main: story, select, chars, resume, retry, quit, continue, again, next, toSelect, pause, quality
 const menuStack = [];
+export function setMenu(menu) { activeMenu = menu; }
 
 function initMenus() {
   MENUS.title = new Menu(EL.mainmenu, (act, dir) => {
-    if (act === 'start') { AudioSys.sfx('uiSelect'); MENU_CB.start?.(); }
+    if (act === 'story') { AudioSys.sfx('uiSelect'); showTitleMenu('story'); }
+    else if (act === 'select') { AudioSys.sfx('uiSelect'); MENU_CB.select?.(); }
+    else if (act === 'chars') { AudioSys.sfx('uiSelect'); MENU_CB.chars?.(); }
     else if (act === 'diff') {
       const keys = Object.keys(DIFF);
       const i = keys.indexOf(G.settings.difficulty);
@@ -105,6 +110,11 @@ function initMenus() {
       saveSettings(); refreshTitle(); AudioSys.sfx('uiMove');
     } else if (act === 'controls') { openSub('controls', 'title'); }
     else if (act === 'settings') { openSub('settings', 'title'); }
+  });
+  // ストーリー: continue / new / password / prologue
+  MENUS.storymenu = new Menu(EL.storymenu, (act) => {
+    if (act === 'back') { AudioSys.sfx('uiBack'); showTitleMenu('main', 'story'); }
+    else MENU_CB.story?.(act);
   });
   MENUS.controls = new Menu(EL.controls, (act) => { if (act === 'back') closeSub(); });
   MENUS.settings = new Menu(EL.settings, (act, dir, input) => {
@@ -138,7 +148,9 @@ function initMenus() {
   });
   MENUS.results = new Menu(EL.results, (act) => {
     AudioSys.sfx('uiSelect');
-    if (act === 'again') MENU_CB.again?.();
+    if (act === 'next') MENU_CB.next?.();
+    else if (act === 'again') MENU_CB.again?.();
+    else if (act === 'select') MENU_CB.toSelect?.();
     else if (act === 'quit') MENU_CB.quit?.();
   });
   refreshTitle();
@@ -161,12 +173,36 @@ export function menuBack() {
   // Escape / back button inside menus
   const onSub = EL.controls.classList.contains('on') || EL.settings.classList.contains('on');
   if (onSub) { closeSub(); return true; }
+  if (EL.title.classList.contains('on') && !EL.storymenu.hidden) { AudioSys.sfx('uiBack'); showTitleMenu('main', 'story'); return true; }
   return false;
 }
 
-export function refreshTitle(best) {
+// Title menus: 'main' or the 'story' sub-menu, optionally focusing the item with data-act = focusAct.
+export function showTitleMenu(which = 'main', focusAct) {
+  showScreen('title');
+  EL.press.hidden = true;
+  EL.mainmenu.hidden = which !== 'main';
+  EL.storymenu.hidden = which !== 'story';
+  const menu = which === 'story' ? MENUS.storymenu : MENUS.title;
+  const vis = menu.visibleItems();
+  menu.focus(Math.max(0, vis.findIndex(it => it.dataset.act === focusAct)));
+  activeMenu = menu;
+}
+
+// info (from main): { best: { score, hits, rank }, canSelect, cont: { label, ok } | null, hasSave, footR }
+let titleInfo = null;
+export function refreshTitle(info) {
+  if (info) titleInfo = info;
   EL.diffval.textContent = DIFF[G.settings.difficulty]?.label || 'NORMAL';
-  if (best) EL.best.innerHTML = `BEST <b>${best.score.toLocaleString()}</b>　HITS <b>${best.hits}</b>　RANK <b>${best.rank}</b>`;
+  const t = titleInfo;
+  if (!t) return;
+  const b = t.best;
+  EL.best.innerHTML = b ? `BEST <b>${b.score.toLocaleString()}</b>　HITS <b>${b.hits}</b>　RANK <b>${b.rank}</b>` : 'BEST <b>0</b>';
+  EL['mi-select'].hidden = !t.canSelect;
+  EL['mi-continue'].hidden = !t.cont;
+  if (t.cont) EL.contval.textContent = t.cont.label;
+  EL.newhint.textContent = t.hasSave ? 'NEW GAME · 上書き' : 'NEW GAME';
+  EL['tfoot-r'].textContent = t.footR;
 }
 function refreshSettings() {
   const S = G.settings;
@@ -181,10 +217,11 @@ function refreshSettings() {
 export function titlePressed() {
   EL.press.hidden = true;
   EL.mainmenu.hidden = false;
+  EL.storymenu.hidden = true;
   MENUS.title.focus(0);
   activeMenu = MENUS.title;
 }
-export function titleReset() { EL.press.hidden = false; EL.mainmenu.hidden = true; activeMenu = null; }
+export function titleReset() { EL.press.hidden = false; EL.mainmenu.hidden = true; EL.storymenu.hidden = true; activeMenu = null; }
 export function updateMenus() { if (activeMenu) activeMenu.update(); }
 export function menuActive() { return !!activeMenu; }
 
@@ -492,6 +529,12 @@ let resAnim = null;
 export function showResults(data) {
   showScreen('results');
   if (data.sub) EL.ressub.textContent = data.sub;
+  // story: next / title — mission select: retry / select / title
+  const story = data.mode === 'story';
+  EL['res-next'].hidden = !story;
+  EL['res-again'].hidden = story;
+  EL['res-select'].hidden = story;
+  MENUS.results.focus(0);
   const grid = EL.resgrid;
   grid.innerHTML = '';
   const rows = data.rows;

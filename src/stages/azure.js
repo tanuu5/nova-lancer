@@ -467,4 +467,25 @@ export default {
   absent(run) { return run.kotaLost ? ['kota'] : []; },   // wingmen missing from the clear formation
   rank: { S: 125, A: 100, B: 70, medal: 115 },             // hits needed (S also needs no deaths)
   resultNote(run) { return run.savedKota ? 'コタ救出 <b>成功</b>' : 'コタ救出 <b>失敗</b>'; },
+  squadAfter(run, squad) { return run.kotaLost ? squad | 1 : squad; },   // Kota bailed out: under repair at the start of mission 02
+
+  // ---- story mode
+  map: { target: 'aquelia' },
+  briefing: {
+    lines: [
+      { who: 'hou', text: 'ランサー隊、聞こえるか。ホウだ。' },
+      { who: 'hou', text: '一時間前、惑星アクエリアの沿岸に、所属不明の機械の軍勢が上陸した。' },
+      { who: 'hou', text: '敵は海から次々と現れ、沿岸に前線基地を築いている。' },
+      { who: 'hou', text: '海上から進入し、峡谷を抜けて、敵の前線基地を突破せよ。' },
+      { who: 'hou', text: '……無理をするな、ランサー1。全員で帰ってこい。' },
+    ],
+    objective: 'アクエリア沿岸の敵部隊を撃破し、前線基地を突破せよ',
+  },
+  talk: [
+    { who: 'rio', text: 'ミズチの残骸から、信号を拾ったわ。どこかへ向けて、何かを送り続けてる。' },
+    { who: 'rio', text: '発信源は……サルガッソ宙域。難破船が漂う「船の墓場」よ。' },
+    { who: 'gantetsu', text: '……あんな所に、何がある。' },
+    { who: 'hou', text: '確かめるしかあるまい。ランサー隊、補給が済みしだい、サルガッソへ向かえ。' },
+    { who: 'kota', text: '休む暇なしだね……。でも、行こう、隊長！' },
+  ],
 };

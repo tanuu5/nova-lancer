@@ -255,8 +255,120 @@
     .p-sub { margin-bottom: 10px; }
     .p-actions { margin-top: 10px; }
   }
+  /* ------------------------------------------------ Story mode screens */
+  .scrim-dark { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, rgba(2,8,22,.72), rgba(1,4,12,.94)); }
+  .comm { display: flex; gap: 12px; align-items: stretch; cursor: pointer; }
+  .comm .r-body { position: relative; }
+  .c-next { position: absolute; right: 12px; bottom: 6px; font: 600 10px/1 var(--f-hud); color: var(--hud); opacity: 0; }
+  .comm.wait .c-next, .story-box.wait .c-next { opacity: 1; animation: blink 1s ease-in-out infinite; }
+  .s-btn { pointer-events: auto; position: absolute; right: var(--gutter); top: calc(14px + env(safe-area-inset-top, 0px)); padding: 7px 12px; border: 1px solid var(--edge); background: rgba(5,14,32,.55);
+    font: 600 11px/1 var(--f-hud); letter-spacing: .2em; color: #dff5ff; cursor: pointer; }
+
+  /* briefing */
+  .brief { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: auto 1fr auto; gap: 14px 26px;
+    padding: calc(22px + env(safe-area-inset-top, 0px)) clamp(16px, 5vw, 70px) calc(18px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; overflow: auto; }
+  .brief-head { grid-column: 1 / -1; }
+  .bh-small { font: 600 12px/1 var(--f-hud); letter-spacing: .5em; color: var(--hud); }
+  .bh-title { font: 400 clamp(32px, 6vw, 64px)/1 var(--f-display); font-style: italic; letter-spacing: .05em; margin: 10px 0 6px; color: #fff; filter: drop-shadow(0 0 16px rgba(80,190,255,.45)); }
+  .bh-place { font: 700 14px/1.2 var(--f-jp); letter-spacing: .3em; color: #cfeaff; }
+  .brief-map { align-self: center; width: 100%; aspect-ratio: 400 / 264; max-height: 100%; border: 1px solid var(--hud-dim); background: radial-gradient(circle at 50% 50%, rgba(255,190,90,.08), rgba(3,10,26,.5) 70%); }
+  .brief-map svg { display: block; width: 100%; height: 100%; }
+  .brief-side { display: flex; flex-direction: column; gap: 12px; min-height: 0; justify-content: center; }
+  .brief-comm .r-face { width: clamp(76px, 9vw, 112px); }
+  .brief-comm .r-text { min-height: 4.7em; }
+  .brief-obj { border-left: 3px solid var(--amber); background: var(--panel); padding: 9px 14px; font: 700 14px/1.6 var(--f-jp); color: #fff3d6; }
+  .brief-obj .lbl, .brief-pass .lbl { display: block; font: 600 10px/1.4 var(--f-hud); letter-spacing: .35em; color: var(--amber); }
+  .brief-pass { font: 600 12px/1.5 var(--f-hud); color: var(--dim); }
+  .brief-pass b { font: 800 18px/1.3 var(--f-hud); letter-spacing: .18em; color: #fff; }
+  .brief-pass small { display: block; font: 400 11px/1.5 var(--f-jp); letter-spacing: .05em; }
+  .brief-menu { margin-top: 0; width: 100%; }
+  .brief-foot { grid-column: 1 / -1; }
+  @media (max-width: 760px) {
+    .brief { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto; gap: 12px; }
+    .brief-map { max-height: 27vh; width: auto; justify-self: center; height: 27vh; max-width: 100%; }
+    .brief-comm .r-text { min-height: 3.1em; }
+    .brief-head { padding-right: 70px; }
+  }
+
+  /* post-clear talk & prologue */
+  .talk-comm { position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(720px, calc(100vw - 2 * var(--gutter))); }
+  .talk-comm .r-face { width: clamp(84px, 11vw, 120px); }
+  .talk-comm .r-text { min-height: 4.7em; }
+  #story { background: #02040b; }
+  .story-bg { position: absolute; inset: 0; background:
+    radial-gradient(1px 1px at 12% 22%, #fff 50%, transparent), radial-gradient(1px 1px at 82% 14%, #cfe6ff 50%, transparent), radial-gradient(1.5px 1.5px at 66% 72%, #fff 50%, transparent),
+    radial-gradient(1px 1px at 30% 80%, #bcd 50%, transparent), radial-gradient(1px 1px at 48% 36%, #fff 50%, transparent), radial-gradient(1px 1px at 90% 58%, #dde 50%, transparent),
+    radial-gradient(ellipse at 50% 120%, rgba(60,110,200,.35), transparent 60%), #02040b; }
+  .story-box { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 2 * var(--gutter) - 8px)); cursor: pointer; }
+  .story-head { font: 600 12px/1 var(--f-hud); letter-spacing: .6em; color: var(--hud); margin-bottom: 18px; }
+  .story-text { font: 400 clamp(15px, 2.1vw, 19px)/2 var(--f-radio); color: #eaf6ff; min-height: 8em; white-space: pre-line; text-wrap: pretty; }
+  .story-box .c-next { right: 0; bottom: -18px; }
+
+  /* to be continued */
+  .tbc-big { font: 400 clamp(30px, 6vw, 54px)/1.1 var(--f-display); font-style: italic; letter-spacing: .06em; color: #fff; margin: 4px 0 10px; filter: drop-shadow(0 0 16px rgba(80,190,255,.5)); }
+
+  /* mission select */
+  .mission-list .mi { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; align-items: center; }
+  .mission-list .m-no { font: 600 11px/1 var(--f-hud); letter-spacing: .2em; color: var(--hud); }
+  .mission-list .m-name { font: 400 18px/1.1 var(--f-display); font-style: italic; letter-spacing: .05em; color: inherit; }
+  .mission-list .m-place { grid-column: 2; font: 700 11px/1.3 var(--f-jp); letter-spacing: .15em; color: var(--dim); }
+  .mission-list .m-best { grid-row: 1 / span 2; grid-column: 3; text-align: right; font: 600 11px/1.5 var(--f-hud); letter-spacing: .1em; color: var(--dim); }
+  .mission-list .m-best b { color: var(--amber); font-weight: 600; }
+  .mission-list .mi.locked { color: rgba(142,176,198,.45); cursor: default; }
+  .mission-list .mi.locked .m-no { color: rgba(127,231,255,.35); }
+
+  /* characters */
+  .chars { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(170px, 230px) minmax(0, 1fr); grid-template-rows: auto 1fr auto; gap: 14px 26px;
+    padding: calc(22px + env(safe-area-inset-top, 0px)) clamp(16px, 4vw, 56px) calc(16px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+  .chars-head { grid-column: 1 / -1; }
+  .ch-list { display: flex; flex-direction: column; gap: 2px; overflow: auto; min-height: 0; overscroll-behavior: contain; }
+  .ch-item { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border: 0; background: transparent; cursor: pointer; text-align: left; color: var(--dim); font: 700 14px/1.2 var(--f-jp); letter-spacing: .08em; }
+  .ch-item .mini { position: relative; width: 34px; height: 34px; flex: none; overflow: hidden; background: radial-gradient(circle at 50% 35%, #123a66, #061226 75%); border: 1px solid var(--hud-dim); }
+  .ch-item .mini svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ch-item .grp { display: block; font: 600 9px/1.2 var(--f-hud); letter-spacing: .2em; color: rgba(142,176,198,.7); }
+  .ch-item.sel { color: #fff; background: linear-gradient(90deg, rgba(63,184,255,.28), rgba(63,184,255,0)); }
+  .ch-item.sel .mini { border-color: var(--hud); box-shadow: 0 0 10px rgba(127,231,255,.5); }
+  .ch-item.unknown { color: rgba(142,176,198,.5); }
+  .ch-detail { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-content: start; min-height: 0; overflow: auto; }
+  .ch-face { position: relative; width: clamp(110px, 15vw, 180px); aspect-ratio: 1; background: radial-gradient(circle at 50% 35%, #123a66, #061226 75%); border: 1px solid var(--edge); overflow: hidden;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%); }
+  .ch-face svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ch-face.ship { display: grid; place-items: center; font: 600 11px/1.4 var(--f-hud); letter-spacing: .2em; color: var(--hud); text-align: center; }
+  .ch-info { background: var(--panel); border: 1px solid var(--hud-dim); padding: 14px 16px; }
+  .ch-role { font: 600 11px/1 var(--f-hud); letter-spacing: .3em; color: var(--hud); }
+  .ch-name { font: 900 clamp(24px, 3.4vw, 34px)/1.15 var(--f-jp); margin: 8px 0 2px; letter-spacing: .08em; }
+  .ch-en { font: 600 12px/1 var(--f-hud); letter-spacing: .3em; color: var(--dim); }
+  .ch-stats { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 10px; font: 700 12px/1.4 var(--f-jp); }
+  .ch-stats div { display: flex; gap: 8px; } .ch-stats dt { color: var(--dim); font-weight: 400; } .ch-stats dd { margin: 0; color: #fff; }
+  .ch-prof { margin: 0; font: 400 14px/1.8 var(--f-jp); color: #dcecf8; text-wrap: pretty; }
+  .ch-line { margin-top: 14px; border-top: 1px solid var(--hud-dim); padding-top: 10px; font: 400 15px/1.6 var(--f-radio); color: #f2fbff; min-height: 1.6em; }
+  .ch-line .lbl { display: block; font: 600 10px/1.4 var(--f-hud); letter-spacing: .35em; color: var(--hud); margin-bottom: 4px; }
+  .ch-actions { grid-column: 1 / -1; margin: 0; width: min(360px, 100%); }
+  @media (max-width: 760px) {
+    .chars { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; gap: 10px; }
+    .ch-list { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
+    .ch-item { flex-direction: column; gap: 4px; padding: 4px; font-size: 10px; min-width: 54px; text-align: center; }
+    .ch-item .grp { display: none; }
+    .ch-item .mini { width: 44px; height: 44px; }
+    .ch-detail { grid-template-columns: 1fr; gap: 10px; }
+    .ch-face { width: 96px; }
+  }
+
+  /* password */
+  .pw-slots { display: flex; justify-content: center; gap: 6px; margin: 6px 0 10px; font: 800 22px/1 var(--f-hud); }
+  .pw-slots span { width: 1.25em; padding: 8px 0; text-align: center; border-bottom: 2px solid var(--hud-dim); color: #fff; }
+  .pw-slots span.cur { border-color: var(--hud); animation: blink 1s ease-in-out infinite; }
+  .pw-slots i { width: 10px; align-self: center; height: 2px; background: var(--hud-dim); }
+  .pw-msg { min-height: 1.5em; text-align: center; font: 700 13px/1.5 var(--f-jp); color: var(--dim); margin-bottom: 8px; }
+  .pw-msg.bad { color: var(--danger); } .pw-msg.ok { color: var(--lime); }
+  .pw-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .pw-key { height: 40px; border: 1px solid var(--hud-dim); background: rgba(10,30,60,.45); font: 700 15px/1 var(--f-hud); color: #dff5ff; cursor: pointer; }
+  .pw-key.wide { grid-column: span 4; font-family: var(--f-jp); font-size: 13px; letter-spacing: .1em; }
+  .pw-key.sel { border-color: var(--hud); background: rgba(63,184,255,.35); color: #fff; box-shadow: 0 0 10px rgba(127,231,255,.5); }
+  @media (max-width: 420px) { .pw-slots { gap: 3px; font-size: 18px; } .pw-key { height: 36px; } }
+
   @media (prefers-reduced-motion: reduce) {
-    .press, #warning.on, .hits.pop, #title .logo, #title .logo .l2 { animation: none; }
+    .press, #warning.on, .hits.pop, #title .logo, #title .logo .l2, .comm.wait .c-next, .story-box.wait .c-next, .pw-slots span.cur { animation: none; }
   }
 </style>
 <!-- @@BODY@@ -->
@@ -313,13 +425,22 @@
       <div class="logo-jp">ノヴァ・ランサー</div>
       <div class="press" id="press">PRESS ANY KEY</div>
       <div class="menu" id="mainmenu" hidden>
-        <button class="mi" data-act="start"><span>ミッション開始</span><span class="en">START</span></button>
+        <button class="mi" data-act="story"><span>ストーリー</span><span class="en">STORY</span></button>
+        <button class="mi" data-act="select" id="mi-select" hidden><span>ミッション選択</span><span class="en">MISSION SELECT</span></button>
+        <button class="mi" data-act="chars"><span>キャラクター</span><span class="en">CHARACTERS</span></button>
         <button class="mi" data-act="diff"><span>難易度</span><span class="val" id="diffval">NORMAL</span></button>
         <button class="mi" data-act="controls"><span>操作方法</span><span class="en">CONTROLS</span></button>
         <button class="mi" data-act="settings"><span>設定</span><span class="en">SETTINGS</span></button>
       </div>
+      <div class="menu" id="storymenu" hidden>
+        <button class="mi" data-act="continue" id="mi-continue" hidden><span>つづきから</span><span class="val" id="contval">MISSION 01</span></button>
+        <button class="mi" data-act="new"><span>はじめから</span><span class="en" id="newhint">NEW GAME</span></button>
+        <button class="mi" data-act="password"><span>パスワード</span><span class="en">PASSWORD</span></button>
+        <button class="mi" data-act="prologue"><span>プロローグ</span><span class="en">PROLOGUE</span></button>
+        <button class="mi" data-act="back"><span>戻る</span><span class="en">BACK</span></button>
+      </div>
     </div>
-    <div class="t-foot"><span class="t-best" id="best">BEST <b>0</b></span><span class="t-copy"><span>©</span> 2026 <span>たぬ</span></span><span>MISSION 01 · AZURE COAST</span></div>
+    <div class="t-foot"><span class="t-best" id="best">BEST <b>0</b></span><span class="t-copy"><span>©</span> 2026 <span>たぬ</span></span><span id="tfoot-r">MISSION 01 · AZURE COAST</span></div>
   </section>
 
   <section id="controls" class="screen">
@@ -413,9 +534,105 @@
       <div class="rank"><div class="r" id="rank">S</div><div class="meta" id="rankmeta"></div></div>
       <div class="medal" id="medal"><i></i>MEDAL GET</div>
       <div class="menu" style="width:100%" id="resmenu">
-        <button class="mi" data-act="again"><span>もう一度出撃</span><span class="en">RETRY</span></button>
+        <button class="mi" data-act="next" id="res-next"><span>次へ</span><span class="en">NEXT</span></button>
+        <button class="mi" data-act="again" id="res-again"><span>もう一度出撃</span><span class="en">RETRY</span></button>
+        <button class="mi" data-act="select" id="res-select"><span>ミッション選択へ</span><span class="en">SELECT</span></button>
         <button class="mi" data-act="quit"><span>タイトルへ戻る</span><span class="en">TITLE</span></button>
       </div>
+    </div>
+  </section>
+
+  <section id="briefing" class="screen">
+    <div class="scrim-dark"></div>
+    <div class="brief">
+      <div class="brief-head">
+        <div class="bh-small">BRIEFING · <span id="br-no">MISSION 01</span></div>
+        <h2 class="bh-title" id="br-title">AZURE COAST</h2>
+        <div class="bh-place" id="br-place">惑星アクエリア</div>
+      </div>
+      <div class="brief-map" id="br-map"></div>
+      <div class="brief-side">
+        <div class="comm brief-comm" id="br-comm">
+          <div class="r-face" id="br-face"></div>
+          <div class="r-body"><div class="r-name" id="br-name"></div><div class="r-text" id="br-text"></div><div class="c-next">▼</div></div>
+        </div>
+        <div class="brief-obj"><span class="lbl">OBJECTIVE · 作戦目標</span><span id="br-obj"></span></div>
+        <div class="brief-pass" id="br-pass"></div>
+        <div class="menu brief-menu" id="br-menu" hidden>
+          <button class="mi" data-act="sortie"><span>出撃</span><span class="en">SORTIE</span></button>
+          <button class="mi" data-act="back"><span>タイトルへ戻る</span><span class="en">BACK</span></button>
+        </div>
+      </div>
+    </div>
+    <button class="s-btn" id="br-skip">SKIP ▶▶</button>
+  </section>
+
+  <section id="talk" class="screen">
+    <div class="comm talk-comm" id="tk-comm">
+      <div class="r-face" id="tk-face"></div>
+      <div class="r-body"><div class="r-name" id="tk-name"></div><div class="r-text" id="tk-text"></div><div class="c-next">▼</div></div>
+    </div>
+    <button class="s-btn" id="tk-skip">SKIP ▶▶</button>
+  </section>
+
+  <section id="story" class="screen">
+    <div class="story-bg"></div>
+    <div class="story-box" id="st-box"><div class="story-head" id="st-head">PROLOGUE</div><div class="story-text" id="st-text"></div><div class="c-next">▼</div></div>
+    <button class="s-btn" id="st-skip">SKIP ▶▶</button>
+  </section>
+
+  <section id="tbc" class="screen">
+    <div class="scrim"></div>
+    <div class="panel">
+      <div class="p-sub" style="margin-bottom:0" id="tbc-head">MISSION COMPLETE</div>
+      <div class="tbc-big">TO BE CONTINUED</div>
+      <div class="p-sub" id="tbc-sub"></div>
+      <div class="brief-pass" id="tbc-pass"></div>
+      <div class="menu" style="width:100%" id="tbc-menu">
+        <button class="mi" data-act="title"><span>タイトルへ</span><span class="en">TITLE</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="select" class="screen">
+    <div class="scrim"></div>
+    <div class="panel p-split" id="sel-panel">
+      <h2 class="p-title">MISSION SELECT</h2>
+      <div class="p-sub">ミッション選択　クリアした面を選んで遊べます</div>
+      <div class="p-body"><div class="menu mission-list" id="sel-list" style="width:100%;margin-top:0"></div></div>
+      <div class="p-actions" id="sel-actions"></div>
+    </div>
+  </section>
+
+  <section id="chars" class="screen">
+    <div class="scrim"></div>
+    <div class="chars">
+      <div class="chars-head"><h2 class="p-title">CHARACTERS</h2><div class="p-sub" style="margin-bottom:0">登場人物</div></div>
+      <div class="ch-list" id="ch-list"></div>
+      <div class="ch-detail">
+        <div class="ch-face" id="ch-face"></div>
+        <div class="ch-info">
+          <div class="ch-role" id="ch-role"></div>
+          <h3 class="ch-name" id="ch-name"></h3>
+          <div class="ch-en" id="ch-en"></div>
+          <dl class="ch-stats" id="ch-stats"></dl>
+          <p class="ch-prof" id="ch-prof"></p>
+          <div class="ch-line"><span class="lbl">VOICE</span><span id="ch-line"></span></div>
+        </div>
+      </div>
+      <div class="menu ch-actions" id="ch-menu"><button class="mi" data-act="back"><span>戻る</span><span class="en">BACK</span></button></div>
+    </div>
+  </section>
+
+  <section id="password" class="screen">
+    <div class="scrim"></div>
+    <div class="panel" style="width:min(460px, calc(100vw - 32px))">
+      <h2 class="p-title">PASSWORD</h2>
+      <div class="p-sub">パスワードを入れると、その面の始めから続けられます</div>
+      <div class="pw-slots" id="pw-slots"></div>
+      <div class="pw-msg" id="pw-msg"></div>
+      <div class="pw-grid" id="pw-grid"></div>
+      <div class="menu" style="width:100%" id="pw-menu"><button class="mi" data-act="back"><span>戻る</span><span class="en">BACK</span></button></div>
     </div>
   </section>
 
