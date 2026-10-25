@@ -14,7 +14,7 @@ let ctx, cw = 1, ch = 1, dpr = 1;
 export function initHUD() {
   for (const id of ['hud', 'hudc', 'g-shield', 'g-boost', 'gold', 'lives', 'hits', 'score', 'bombs', 'laserlv', 'boss', 'bossfill', 'bossghost', 'tip', 'radio', 'rface', 'rname', 'rtext',
     'banner', 'warning', 'title', 'press', 'mainmenu', 'diffval', 'best', 'controls', 'settings', 'pause', 'gameover', 'results', 'loading', 'loadfill', 'loadmsg',
-    'resgrid', 'restotal', 'rank', 'rankmeta', 'medal', 'touch', 'tstick', 'tknob', 'tpause', 'go-sub']) EL[id] = $(id);
+    'resgrid', 'restotal', 'rank', 'rankmeta', 'medal', 'touch', 'tstick', 'tknob', 'tpause', 'go-sub', 'bossen', 'bossja', 'ressub']) EL[id] = $(id);
   EL.shieldFill = EL['g-shield'].querySelector('.g-fill');
   EL.shieldGhost = EL['g-shield'].querySelector('.g-ghost');
   EL.shieldBar = EL['g-shield'].querySelector('.g-bar');
@@ -234,7 +234,7 @@ function startRadio(m) {
   EL.rface.classList.add('static');
   EL.rname.innerHTML = `<span style="color:${C.color}">${C.nameJa || C.name}</span><small>${C.name} · ${C.role}</small>`;
   EL.rtext.textContent = '';
-  EL.rtext.classList.toggle('enemy', m.who === 'mizuchi');
+  EL.rtext.classList.toggle('enemy', !!C.enemy);
   EL.radio.classList.add('on');
   m.svg = EL.rface.querySelector('svg');
   m.chars = [...m.text];
@@ -308,7 +308,11 @@ export function banner(small, big, sub = '', dur = 3.2, cls = '') {
 export function hideBanner() { EL.banner.classList.remove('on'); bannerT = 0; }
 export function warning(on) { EL.warning.classList.toggle('on', on); }
 let bossOn = false, bossFrac = 1;
-export function bossBar(on) { bossOn = on; EL.boss.classList.toggle('on', on); }
+export function bossBar(on, info) {
+  bossOn = on;
+  if (info) { EL.bossen.textContent = info.en; EL.bossja.textContent = info.bar; }
+  EL.boss.classList.toggle('on', on);
+}
 export function setBossHP(f) {
   if (Math.abs(f - bossFrac) > 0.0005) {
     bossFrac = f;
@@ -487,6 +491,7 @@ function bracket(x, y, r, l) {
 let resAnim = null;
 export function showResults(data) {
   showScreen('results');
+  if (data.sub) EL.ressub.textContent = data.sub;
   const grid = EL.resgrid;
   grid.innerHTML = '';
   const rows = data.rows;

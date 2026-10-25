@@ -6,15 +6,16 @@ import {
 } from './core.js';
 import { initInput, updateInput, endInputFrame, Input } from './input.js';
 import { initRenderer, createSky, createLights, makeTextures, renderFrame, updatePost, updateLights, POST, applyQuality, ATMO, GFX } from './gfx.js';
-import { initWorld, updateWorld, updateTerrain, resetTerrain, setWorldAtmosphere, railFrame, railToWorld, terrainHeight, worldToRail, pathX, paletteAt, __worldDebug } from './world.js';
+import { initWorld, useStageWorld, updateWorld, updateTerrain, resetTerrain, setWorldAtmosphere, railFrame, railToWorld, terrainHeight, worldToRail, pathX, paletteAt, __worldDebug } from './world.js';
 import { initFX, beginFXFrame, updateFX, clearFX, bigFlash, addShake, FX, explode } from './fx.js';
 import { PlayerShip, updateCamera, resetCamera, CAM } from './ship.js';
 import { updatePlayerWeapons, updateEnemyBullets, clearWeapons, resetCharge, WSTATE, ebullets } from './weapons.js';
 import { updateEnemies, clearEnemies, warmEnemies, unwarmEnemies, enemies } from './enemies.js';
 import { initProps, updateProps, spawnProp } from './props.js';
 import { initWingmen, resetWingmen, updateWingmen, updateWingmenTrails, setWingMode, setWingStance, sortieAll, WING } from './wingmen.js';
-import { initBoss, BOSS } from './boss.js';
-import { initLevel, startLevel, updateLevel } from './level.js';
+import { initBoss, useBoss, BOSS } from './boss.js';
+import { initLevel, loadStageScript, startLevel, updateLevel } from './level.js';
+import { STAGES } from './stages/index.js';
 import {
   initHUD, showScreen, hideScreens, hudVisible, updateHUD, radio, clearRadio, tip, clearTip, banner, hideBanner, warning, bossBar,
   setBossHP, popText, MENU_CB, titlePressed, titleReset, updateMenus, menuBack, refreshTitle, setLoading, showResults,
@@ -29,6 +30,15 @@ const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _p = new THREE.Vector
 let ship = null;
 let best = null;
 const S = { t: 0, phase: '', fadeTo: null };   // per-state scratch
+let CUR = null;                                // the stage definition being played (the title flies over the first one)
+
+// Load a stage: its world (course, terrain, palettes), its script and its boss.
+function useStage(def) {
+  CUR = def;
+  useStageWorld(def);
+  loadStageScript(def);
+  useBoss(def.boss.id);
+}
 
 // ============================================================ Boot
 async function boot() {
@@ -56,6 +66,7 @@ async function boot() {
   G.player = ship;
   G.run = newRun(G.settings.difficulty);
   initLevel();
+  useStage(STAGES[0]);
   setLoading(0.6, 'SQUADRON');
   await nextFrame();
   G.rail.d = 0;
@@ -88,7 +99,7 @@ async function boot() {
     enemies, WSTATE, ebullets, explode,
     __key: (code, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code })),
     // Regression helpers: a seeded Math.random makes a __bot run repeatable, __snap/__fp summarise game state and the world.
-    __seed: (s) => { Math.random = mulberry32(s); },
+    __seed: (s) => { const r0 = mulberry32(s); window.__rc = 0; Math.random = () => { window.__rc++; return r0(); }; },
     __snap: () => {
       const r = G.run, B = BOSS.inst, n = (v) => Math.round(v * 100) / 100;
       return [G.state, n(G.rail.d), r.hits, r.score, n(r.shield), r.lives, r.deaths, enemies.length, B.active ? n(B.hp) : -1,
@@ -132,16 +143,13 @@ async function boot() {
         let tu = best ? best.u : 0, tv = best ? Math.max(8, best.v) : 22;
         const B = BOSS.inst;
         if (B.active && B.phase !== 'intro') {
-          let tgt = null;
-          for (const sg of B.segs) if (sg.turret && sg.turret.alive && sg.pos.y > 0) { tgt = sg.turret.pos; break; }
-          if (!tgt && B.jawOpen > 0.5) tgt = B.coreT.pos;
-          if (!tgt) tgt = B.headPos;
-          const rr = worldToRail(tgt, _v); tu = clamp(rr.y, -44, 44); tv = clamp(rr.z, 6, 56);
+          const rr = worldToRail(B.botAim(), _v); tu = clamp(rr.y, -44, 44); tv = clamp(rr.z, 6, 56);
         }
         set('KeyD', tu > ship.u + 2); set('KeyA', tu < ship.u - 2);
         set('KeyW', tv > ship.v + 2); set('KeyS', tv < ship.v - 2);
         if (opts.fire !== false) set('KeyJ', i % 6 === 0);
         frame(1 / 60);
+        opts.onFrame?.(i);
       }
       for (const c of Object.keys(held)) set(c, false);
       return { d: Math.round(G.rail.d), hits: G.run.hits, shield: Math.round(G.run.shield), lives: G.run.lives, state: G.state, enemies: enemies.length };
@@ -156,7 +164,7 @@ const manual = () => __DEV__ && window.__manual;
 if (__DEV__) {
   const q = new URLSearchParams(location.search);
   if (q.has('manual')) window.__manual = true;
-  if (q.has('seed')) Math.random = mulberry32(+q.get('seed') || 1);
+  if (q.has('seed')) { const r0 = mulberry32(+q.get('seed') || 1); window.__rc = 0; Math.random = () => { window.__rc++; return r0(); }; }
 }
 window.addEventListener('blur', () => { if (G.state === 'play' && !S.intro && !manual()) pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play' && !S.intro && !manual()) pause(); });
@@ -182,7 +190,7 @@ function wireEvents() {
   on('propDestroyed', (p, pos) => { G.run.hits += 1; G.run.score += 300; popText(pos, '+1', '#b4ff6a'); });
   on('missileDown', () => { G.run.score += 50; });
   on('bonus', (amt, pos, label) => { G.run.score += amt; popText(pos, label, '#ffd166', 22); AudioSys.sfx('goldRing'); });
-  on('ring', (kind) => {
+  on('ring', (kind, ring) => {
     const run = G.run;
     if (kind === 'silver') { run.shield = Math.min(run.maxShield, run.shield + 25); run.score += 500; run.rings++; AudioSys.sfx('ring'); }
     else if (kind === 'gold') {
@@ -194,7 +202,7 @@ function wireEvents() {
         else { run.lives++; AudioSys.sfx('extraLife'); tip('1UP！', 3); }
       }
     } else if (kind === 'check') {
-      run.checkpoint = 6100;
+      run.checkpoint = ring.s;
       run.shield = Math.min(run.maxShield, run.shield + run.maxShield * 0.5);
       AudioSys.sfx('checkpoint');
       banner('SUPPLY RING', 'CHECKPOINT', '', 2.2);
@@ -263,7 +271,8 @@ function enterTitle(first) {
   if (G.warnLoop) { G.warnLoop.stop(0.2); G.warnLoop = null; }
   hudVisible(false);
   G.run = newRun(G.settings.difficulty);
-  G.rail.d = 150;
+  if (CUR !== STAGES[0]) useStage(STAGES[0]);
+  G.rail.d = CUR.attract[0];
   G.rail.speed = 45;
   resetTerrain();
   updateTerrain(G.rail.d, true);
@@ -323,7 +332,7 @@ function setupStage(d, intro) {
   ship.controllable = !intro;
   ship.autoPilot = null;
   resetWingmen(true);
-  if (G.run.kotaLost && d > 3850) WING.byId.kota.hide();
+  CUR.onSetup?.(d, G.run);
   resetCamera(ship);
   CAM.override = null;
   resetHUDCache();
@@ -331,13 +340,13 @@ function setupStage(d, intro) {
   POST.letterbox = intro ? 1 : 0;
   S.intro = intro ? { t: 0 } : null;
   S.bossCine = null;
-  if (d < 10500) AudioSys.playMusic('stage1', { fade: 0.4 });
+  if (d < CUR.bossAt) AudioSys.playMusic(CUR.music, { fade: 0.4 });
   else AudioSys.stopMusic(0.5);
   fadeTo(0, 0.8);
   if (intro) {
-    after(0.8, () => banner('MISSION 01', 'AZURE COAST', '惑星アクエリア　沿岸防衛線', 3.6));
+    after(0.8, () => banner(`MISSION ${String(CUR.no).padStart(2, '0')}`, CUR.title, CUR.sub, 3.6));
   } else if (d > 0) {
-    banner('RESTART', d >= 10500 ? 'BOSS' : 'CHECKPOINT', '', 2);
+    banner('RESTART', d >= CUR.bossAt ? 'BOSS' : 'CHECKPOINT', '', 2);
   }
   if (!intro && G.run.deaths > 0) after(1.2, () => radio('hou', '無理をするな、ランサー1。体勢を立て直せ！', { prio: 1 }));
 }
@@ -384,9 +393,10 @@ function startBoss() {
   sortieAll(1.8, 8);            // the squadron overtakes the leader as the boss surfaces
   S.bossCine = { t: 0 };
   POST.letterbox = 1;
-  radio('mizuchi', '……侵入者ヲ確認。排除スル。', { prio: 2, hold: 1.2 });
-  after(3.2, () => { banner('WARNING', 'MIZUCHI', '海竜型機動兵器　ミズチ', 3, 'boss'); });
-  after(6.2, () => bossBar(true));
+  const info = CUR.boss;
+  radio(info.voice, info.intro, { prio: 2, hold: 1.2 });
+  after(3.2, () => { banner('WARNING', info.en, info.title, 3, 'boss'); });
+  after(6.2, () => bossBar(true, info));
 }
 
 function startClear() {
@@ -399,15 +409,12 @@ function startClear() {
   AudioSys.playMusic('clear', { fade: 0.6 });
   hudVisible(true);
   after(1.2, () => banner('MISSION', 'COMPLETE', 'ミッション　コンプリート', 5, 'gold'));
-  after(1.4, () => G.run.kotaLost
-    ? radio('rio', '目標の沈黙を確認。……お見事よ、隊長。', { prio: 2 })
-    : radio('kota', 'やったー！　隊長、最高だよ！', { prio: 2 }));
-  after(1.5, () => radio('gantetsu', '見事な腕だ。……帰還するぞ。'));
-  after(1.6, () => radio('hou', 'よくやった、ランサー隊。アクエリアは守られた。', { hold: 2.4 }));
+  CUR.onClear?.(G.run);
   WING.list.forEach((w, i) => after(2.4 + i * 0.35, () => { if (!w.gone) { w.barrelRoll(); AudioSys.sfx('roll', { vol: 0.5, pan: i - 1 }); } }));
   setWingStance('front');
+  const absent = CUR.absent?.(G.run) || [];
   for (const w of WING.list) {
-    if (w.id === 'kota' && G.run.kotaLost) continue;
+    if (absent.includes(w.id)) continue;
     w.reset(); w.show(); w.mode = 'formation';
   }
 }
@@ -421,8 +428,9 @@ function finishRun() {
   const lifeBonus = run.lives * 3000;
   const nomiss = run.deaths === 0 ? 10000 : 0;
   const total = run.score + hitBonus + shieldBonus + lifeBonus + nomiss;
-  const rank = run.hits >= 125 && run.deaths === 0 ? 'S' : run.hits >= 100 ? 'A' : run.hits >= 70 ? 'B' : 'C';
-  const medal = run.hits >= 115;
+  const R = CUR.rank;
+  const rank = run.hits >= R.S && run.deaths === 0 ? 'S' : run.hits >= R.A ? 'A' : run.hits >= R.B ? 'B' : 'C';
+  const medal = run.hits >= R.medal;
   const mm = Math.floor(run.time / 60), ss = Math.floor(run.time % 60);
   const rows = [
     { label: 'HITS 撃墜数', value: run.hits },
@@ -433,11 +441,11 @@ function finishRun() {
     { label: 'NO MISS', value: nomiss },
   ];
   const isBest = total > (best?.score || 0);
-  const meta = `命中率 <b>${acc}%</b>　リング <b>${run.rings}</b>　タイム <b>${mm}:${String(ss).padStart(2, '0')}</b><br>${run.savedKota ? 'コタ救出 <b>成功</b>' : 'コタ救出 <b>失敗</b>'}${isBest ? '　<b>NEW RECORD!</b>' : ''}`;
+  const meta = `命中率 <b>${acc}%</b>　リング <b>${run.rings}</b>　タイム <b>${mm}:${String(ss).padStart(2, '0')}</b><br>${CUR.resultNote?.(run) ?? ''}${isBest ? '　<b>NEW RECORD!</b>' : ''}`;
   if (isBest) { best = { score: total, hits: run.hits, rank }; saveBest(best); }
   G.state = 'results';
   hudVisible(false);
-  showResults({ rows, total, rank, medal, meta });
+  showResults({ rows, total, rank, medal, meta, sub: CUR.resultSub });
 }
 
 // ============================================================ Transitions
@@ -619,7 +627,7 @@ function updateTitle(rdt) {
   ship.autoPilot.v = 24 + Math.sin(t * 0.37) * 6;
   G.rail.speed = 45;
   G.rail.d += G.rail.speed * rdt;
-  if (G.rail.d > 3800) { G.rail.d = 150; resetTerrain(); updateTerrain(G.rail.d, true); resetWingmen(true); titleFormation(); }
+  if (G.rail.d > CUR.attract[1]) { G.rail.d = CUR.attract[0]; resetTerrain(); updateTerrain(G.rail.d, true); resetWingmen(true); titleFormation(); }
   titleCamera(rdt);
   simulate(rdt, rdt, false);
 }

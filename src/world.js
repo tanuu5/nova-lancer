@@ -1,32 +1,21 @@
-// World: rail path, stage zones, streaming low-poly terrain, ocean, clouds, decorations and palettes.
+// World: rail frame, streaming low-poly terrain, ocean, clouds, decoration kit and palettes.
+// What the land looks like along the course is up to the current stage (see useStageWorld).
 import * as THREE from 'three';
-import { G, clamp, lerp, smoothstep, Simplex2, fbm2, ridged2, mulberry32, hash2 } from './core.js';
+import { G, clamp, lerp, smoothstep, mulberry32 } from './core.js';
 import {
   ATMO, FOG, GLSL_NOISE, GLSL_SKY, GLSL_FOG_FN, patchFog, TEX,
   preparePalette, lerpPalette, applyPalette, makeEnvMap, LIGHTS,
 } from './gfx.js';
 
-// ============================================================ Zones & rail path
-export const ZONE = { canyonStart: 4400, canyonEnd: 8000, fortStart: 8000, fortEnd: 10400, boss: 10900 };
-const _zw = { ocean: 1, canyon: 0, fort: 0, boss: 0 };
-export function zoneW(d, out = _zw) {
-  const cIn = smoothstep(4400, 5000, d), cOut = smoothstep(7700, 8300, d), fOut = smoothstep(10300, 10900, d);
-  out.canyon = cIn * (1 - cOut);
-  out.fort = cOut * (1 - fOut);
-  out.boss = fOut;
-  out.ocean = Math.max(0, 1 - out.canyon - out.fort - out.boss);
-  return out;
-}
+// ============================================================ Stage geography (installed by useStageWorld)
+// The course, height field, ground colours, decorations and sky palettes come from the current stage
+// definition (src/stages/). Other modules call these through the live bindings below.
+let SW = null;                          // current stage's world definition
+export let zoneW = () => ({});          // zone weights at rail distance d (the stage's own keys; wingmen climb when .canyon is high)
+export let pathX = () => 0;             // x of the rail centre line at distance d
+export let terrainHeight = () => 0;     // terrain height at world (x, z)
+let faceColor = (x, y, z, ny, out) => out.setRGB(0.5, 0.5, 0.5);
 
-const _pw = { ocean: 1, canyon: 0, fort: 0, boss: 0 };
-export function pathX(d) {
-  const w = zoneW(d, _pw);
-  let x = 0;
-  if (w.ocean > 0) x += w.ocean * (55 * Math.sin(d * 0.0011 + 0.6) + 22 * Math.sin(d * 0.0023 + 2.0));
-  if (w.canyon > 0) x += w.canyon * (125 * Math.sin((d - 4400) * 0.0017) + 38 * Math.sin(d * 0.0041));
-  if (w.fort > 0) x += w.fort * (40 * Math.sin(d * 0.0013));
-  return x;
-}
 
 // Rail frame at distance d: position on the path (y = 0), forward, right, up.
 export function railFrame(d, pos, fwd, right) {
@@ -54,70 +43,6 @@ export function worldToRail(p, out) {
   railFrame(s, _rp, _rf, _rr);
   out.set(s, (p.x - _rp.x) * _rr.x + (p.z - _rp.z) * _rr.z, p.y);
   return out;
-}
-
-// ============================================================ Terrain height field
-const N1 = new Simplex2(1337), N2 = new Simplex2(4242), N3 = new Simplex2(777), N4 = new Simplex2(2024);
-
-function oceanH(x, z, adx) {
-  let h = -24 + 7 * N2.noise(x * 0.01, z * 0.01);
-  const n = fbm2(N1, x * 0.0028, z * 0.0028, 4);
-  const isl = smoothstep(0.1, 0.48, n);
-  if (isl > 0) {
-    const detail = fbm2(N2, x * 0.013, z * 0.013, 3) * 0.5 + 0.5;
-    const peak = 26 + 80 * ridged2(N3, x * 0.004, z * 0.004, 3);
-    const corridor = smoothstep(50, 210, adx);
-    h += isl * (26 + peak * detail) * lerp(0.3, 1, corridor) + isl * 3;
-  }
-  const far = smoothstep(650, 1500, adx);
-  if (far > 0) h = Math.max(h, lerp(h, 30 + 280 * ridged2(N4, x * 0.0011, z * 0.0011, 4), far));
-  return h;
-}
-
-function canyonH(x, z, adx, d) {
-  const halfW = 60 + 20 * Math.sin(d * 0.0029 + 1.0) + 7 * N1.noise(d * 0.006, 7.7);
-  const wallT = smoothstep(halfW, halfW + 34, adx + 5 * N2.noise(x * 0.02, z * 0.02));
-  const floor = -5 + 2.5 * N2.noise(x * 0.04, z * 0.04);
-  const plateau = 118 + 45 * fbm2(N3, x * 0.003, z * 0.003, 3) + 30 * smoothstep(250, 650, adx);
-  let h = lerp(floor, plateau, wallT);
-  if (wallT > 0.01 && wallT < 0.995) {
-    const step = 13;
-    const t = h / step, fl = Math.floor(t), fr = t - fl;
-    h = lerp(h, (fl + smoothstep(0.55, 0.92, fr)) * step, 0.7);
-  }
-  h += fbm2(N4, x * 0.035, z * 0.035, 2) * 5 * wallT;
-  const far = smoothstep(500, 1400, adx);
-  if (far > 0) h += far * 150 * ridged2(N1, x * 0.0015, z * 0.0015, 3);
-  return h;
-}
-
-function fortH(x, z, adx) {
-  let h = 1.4;
-  h += smoothstep(92, 97, adx) * 5;                                   // raised decks
-  h += smoothstep(176, 180, adx) * (1 - smoothstep(196, 200, adx)) * 30; // outer walls
-  const far = smoothstep(320, 950, adx);
-  if (far > 0) h = lerp(h, 25 + 170 * ridged2(N3, x * 0.0016, z * 0.0016, 4), far);
-  return h;
-}
-
-function bossH(x, z, adx) {
-  let h = -30 + 6 * N2.noise(x * 0.008, z * 0.008);
-  const far = smoothstep(900, 1700, adx);
-  if (far > 0) h = lerp(h, 20 + 240 * ridged2(N4, x * 0.001, z * 0.001, 4), far);
-  return h;
-}
-
-const _hw = { ocean: 1, canyon: 0, fort: 0, boss: 0 };
-export function terrainHeight(x, z) {
-  const d = -z;
-  const adx = Math.abs(x - pathX(d));
-  const w = zoneW(d, _hw);
-  let h = 0;
-  if (w.ocean > 0.001) h += w.ocean * oceanH(x, z, adx);
-  if (w.canyon > 0.001) h += w.canyon * canyonH(x, z, adx, d);
-  if (w.fort > 0.001) h += w.fort * fortH(x, z, adx);
-  if (w.boss > 0.001) h += w.boss * bossH(x, z, adx);
-  return h;
 }
 
 // ============================================================ Terrain mesh streaming
@@ -152,64 +77,6 @@ export function groundHeight(x, z) {
     return terrainHeight(x, -dr);
   };
   return lerp(hRow(r0), hRow(r0 + 1), fr);
-}
-
-const _cw = { ocean: 1, canyon: 0, fort: 0, boss: 0 };
-const _col = new THREE.Color();
-const PAL = {
-  deep: new THREE.Color('#1f4a4f'), shallow: new THREE.Color('#3f7d6f'), sand: new THREE.Color('#e3cf98'),
-  grass: new THREE.Color('#5e8f35'), grass2: new THREE.Color('#7aa845'), rock: new THREE.Color('#7b6f63'), rock2: new THREE.Color('#948a7c'),
-  peak: new THREE.Color('#c8c2ba'), snow: new THREE.Color('#f1f3f6'),
-  bed: new THREE.Color('#5b4636'),
-  strata: ['#b4532f', '#d27b45', '#e6a468', '#9b4528', '#d98c57', '#c36a3b'].map(c => new THREE.Color(c)),
-  mesa: new THREE.Color('#b27b4a'), scrub: new THREE.Color('#7e8a45'),
-  metal: new THREE.Color('#2e333b'), metalLine: new THREE.Color('#4d5561'), runway: new THREE.Color('#262a31'), deck: new THREE.Color('#474d57'), wall: new THREE.Color('#2b2f37'),
-  hazard: new THREE.Color('#d9a02a'), duskRock: new THREE.Color('#5d4a60'), duskPeak: new THREE.Color('#8a7690'),
-};
-
-function faceColor(x, y, z, ny, out) {
-  const w = zoneW(-z, _cw);
-  const jitter = 0.9 + 0.2 * hash2(Math.floor(x * 3.1), Math.floor(z * 2.7));
-  let r = 0, g = 0, b = 0;
-  const add = (c, k) => { r += c.r * k; g += c.g * k; b += c.b * k; };
-  if (w.ocean + w.boss > 0.001) {
-    const k = w.ocean + w.boss;
-    let c;
-    if (y < -9) c = PAL.deep;
-    else if (y < -0.8) c = _col.copy(PAL.deep).lerp(PAL.shallow, (y + 9) / 8.2);
-    else if (y < 2.6) c = PAL.sand;
-    else if (y > 230) c = PAL.snow;
-    else if (y > 140) c = PAL.peak;
-    else if (ny < 0.72) c = (hash2(x | 0, z | 0) > 0.5 ? PAL.rock : PAL.rock2);
-    else c = (y > 40 && ny < 0.86) ? PAL.rock2 : (hash2((x * 0.2) | 0, (z * 0.2) | 0) > 0.5 ? PAL.grass : PAL.grass2);
-    add(c === _col ? _col : c, k);
-  }
-  if (w.canyon > 0.001) {
-    let c;
-    if (y < 0.5) c = PAL.bed;
-    else if (ny > 0.9 && y > 80) c = hash2((x * 0.1) | 0, (z * 0.1) | 0) > 0.8 ? PAL.scrub : PAL.mesa;
-    else {
-      const band = Math.floor((y + 4 * N3.noise(x * 0.01, z * 0.01)) / 9);
-      c = PAL.strata[((band % 6) + 6) % 6];
-    }
-    add(c, w.canyon);
-  }
-  if (w.fort > 0.001) {
-    let c;
-    if (y > 40) c = ny > 0.8 ? PAL.duskPeak : PAL.duskRock;
-    else if (y > 20) c = PAL.wall;
-    else if (y > 4) c = PAL.deck;
-    else {
-      // city-block pattern: dark service roads every 48 m, lighter deck plates in between
-      const lx = x - pathX(-z);
-      const bx = Math.floor(lx / 8), bz = Math.floor(z / 8);
-      const road = (((bx % 6) + 6) % 6 === 0) || (((bz % 6) + 6) % 6 === 0);
-      c = Math.abs(lx) < 10 ? PAL.runway : road ? PAL.metal : PAL.metalLine;
-    }
-    add(c, w.fort);
-  }
-  out.setRGB(r * jitter, g * jitter, b * jitter);
-  return out;
 }
 
 let terrainMat = null;
@@ -291,6 +158,7 @@ export function resetTerrain() { for (const ci of [...chunks.keys()]) disposeChu
 
 // ============================================================ Decorations (trees, rocks, buildings)
 let treeGeo, rockGeo, bldgGeo, decoMat, bldgMat, lightGeo, lightGeoCyan, lightMat;
+const DECO = {};   // the kit handed to the stage's decorate(ci, DECO)
 
 function mergeColored(parts) {
   // parts: [geometry, color(hex|Color), emissive(0..1)]
@@ -392,118 +260,11 @@ function initDecorations() {
           }
         }`);
   });
+  Object.assign(DECO, { CHUNK, treeGeo, rockGeo, bldgGeo, decoMat, bldgMat, lightGeo, lightGeoCyan, lightMat });
 }
 
 function buildDecorations(ci) {
-  const list = [];
-  const rnd = mulberry32(ci * 7919 + 13);
-  const d0 = ci * CHUNK;
-  const w = zoneW(d0 + CHUNK / 2, { ocean: 1, canyon: 0, fort: 0, boss: 0 });
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
-  // Trees on islands (ocean) and scrub on mesas (canyon)
-  if (w.ocean + w.canyon > 0.2) {
-    const trees = [];
-    for (let i = 0; i < 160 && trees.length < 70; i++) {
-      const d = d0 + rnd() * CHUNK;
-      const lx = (rnd() * 2 - 1) * 700;
-      const x = pathX(d) + lx, z = -d;
-      const h = terrainHeight(x, z);
-      const ok = w.canyon > 0.5 ? (h > 95 && h < 200) : (h > 3.2 && h < 70);
-      if (!ok) continue;
-      const hx = terrainHeight(x + 3, z), hz = terrainHeight(x, z + 3);
-      if (Math.abs(hx - h) > 2.4 || Math.abs(hz - h) > 2.4) continue;
-      const sc = (w.canyon > 0.5 ? 0.6 : 0.8) + rnd() * 0.9;
-      q.setFromAxisAngle(up, rnd() * Math.PI * 2);
-      s.set(sc, sc * (0.85 + rnd() * 0.4), sc);
-      p.set(x, h - 0.4, z);
-      trees.push(m4.compose(p, q, s).clone());
-    }
-    if (trees.length) {
-      const im = new THREE.InstancedMesh(treeGeo, decoMat, trees.length);
-      trees.forEach((m, i) => im.setMatrixAt(i, m));
-      im.castShadow = true; im.receiveShadow = true;
-      im.computeBoundingSphere();
-      G.scene.add(im); list.push(im);
-    }
-  }
-  // Rocks in canyon river / ocean shallows
-  if (w.canyon > 0.3 || w.ocean > 0.3) {
-    const rocks = [];
-    for (let i = 0; i < 40 && rocks.length < 22; i++) {
-      const d = d0 + rnd() * CHUNK;
-      const lx = (rnd() * 2 - 1) * (w.canyon > 0.3 ? 70 : 500);
-      const x = pathX(d) + lx, z = -d;
-      const h = terrainHeight(x, z);
-      if (h < -3.5 || h > (w.canyon > 0.3 ? 8 : 30)) continue;
-      const sc = 0.6 + rnd() * 1.6;
-      q.setFromEuler(new THREE.Euler(rnd() * 0.5, rnd() * 6.28, rnd() * 0.5));
-      s.set(sc, sc, sc);
-      p.set(x, h, z);
-      rocks.push(m4.compose(p, q, s).clone());
-    }
-    if (rocks.length) {
-      const im = new THREE.InstancedMesh(rockGeo, decoMat, rocks.length);
-      rocks.forEach((m, i) => im.setMatrixAt(i, m));
-      im.castShadow = true; im.receiveShadow = true;
-      im.computeBoundingSphere();
-      G.scene.add(im); list.push(im);
-    }
-  }
-  // Fortress buildings + runway lights
-  if (w.fort > 0.4) {
-    const bl = [], lights = [];
-    for (let i = 0; i < 14; i++) {
-      const d = d0 + rnd() * CHUNK;
-      const side = rnd() < 0.5 ? -1 : 1;
-      const lx = side * (70 + rnd() * 95);
-      const x = pathX(d) + lx, z = -d;
-      const base = terrainHeight(x, z);
-      const hgt = 14 + rnd() * rnd() * 70;
-      const wx = 10 + rnd() * 20, wz = 10 + rnd() * 22;
-      q.setFromAxisAngle(up, (rnd() - 0.5) * 0.3);
-      s.set(wx, hgt, wz);
-      p.set(x, base - 0.5, z);
-      bl.push(m4.compose(p, q, s).clone());
-      if (hgt > 40) { p.set(x, base + hgt + 1.2, z); s.set(1, 1, 1); lights.push(m4.compose(p, q, s).clone()); }
-    }
-    // runway lights along the corridor edges
-    for (let k = 0; k < CHUNK; k += 20) {
-      const d = d0 + k;
-      for (const side of [-1, 1]) {
-        const x = pathX(d) + side * 52, z = -d;
-        p.set(x, terrainHeight(x, z) + 0.4, z); s.set(0.8, 0.5, 0.8);
-        lights.push(m4.compose(p, q.identity(), s).clone());
-      }
-    }
-    if (bl.length) {
-      const im = new THREE.InstancedMesh(bldgGeo, bldgMat, bl.length);
-      bl.forEach((m, i) => im.setMatrixAt(i, m));
-      im.castShadow = true; im.receiveShadow = true;
-      im.computeBoundingSphere();
-      G.scene.add(im); list.push(im);
-    }
-    if (lights.length) {
-      const im = new THREE.InstancedMesh(lightGeo, lightMat, lights.length);
-      lights.forEach((m, i) => im.setMatrixAt(i, m));
-      im.computeBoundingSphere();
-      G.scene.add(im); list.push(im);
-    }
-    // glowing runway centre-line dashes
-    const dashes = [];
-    for (let k = 0; k < CHUNK; k += 16) {
-      const d = d0 + k;
-      const x = pathX(d), z = -d;
-      const slope = (pathX(d + 2) - pathX(d - 2)) * 0.25;
-      q.setFromAxisAngle(up, -Math.atan(slope));
-      p.set(x, terrainHeight(x, z) + 0.25, z); s.set(1, 1, 1);
-      dashes.push(m4.compose(p, q, s).clone());
-    }
-    const dm = new THREE.InstancedMesh(lightGeoCyan, lightMat, dashes.length);
-    dashes.forEach((m, i) => dm.setMatrixAt(i, m));
-    dm.computeBoundingSphere();
-    G.scene.add(dm); list.push(dm);
-  }
-  decoByChunk.set(ci, list);
+  decoByChunk.set(ci, SW.decorate ? SW.decorate(ci, DECO) : []);
 }
 
 // ============================================================ Ocean
@@ -676,61 +437,42 @@ function updateClouds(d, cover) {
 }
 
 // ============================================================ Palettes along the stage
-const RAW_PALETTES = {
-  sunset: {
-    zenith: '#2a58a6', mid: '#9dc0e8', horizon: '#ffc38c', fog: '#f0b88f', sun: '#ffd6a0', cloud: '#fff1e2', cloudShadow: '#a08aa6',
-    hemiSky: '#a8c2ee', hemiGround: '#6d5242', waterDeep: '#0b3550', waterScatter: '#1d6a70', light: '#ffd9ae',
-    sunElev: 11, sunAz: -38, sunDisc: 10, sunLight: 2.7, fogDensity: 0.0007, fogStart: 220, fogHeight: 0.0009, fogFalloff: 0.016,
-    glow: 0.34, cloudCover: 0.36, hemi: 1.0, stars: 0, exposure: 0.92, bloom: 0.42, env: 0.85,
-  },
-  canyon: {
-    zenith: '#3160ae', mid: '#a3c2e6', horizon: '#ffb37a', fog: '#eba47c', sun: '#ffcf96', cloud: '#ffeedd', cloudShadow: '#b08a8e',
-    hemiSky: '#b4c6ea', hemiGround: '#7f4b31', waterDeep: '#1f3a3d', waterScatter: '#3d6552', light: '#ffcf98',
-    sunElev: 15, sunAz: -42, sunDisc: 10, sunLight: 3.0, fogDensity: 0.00062, fogStart: 240, fogHeight: 0.0012, fogFalloff: 0.012,
-    glow: 0.34, cloudCover: 0.3, hemi: 0.95, stars: 0, exposure: 0.92, bloom: 0.42, env: 0.8,
-  },
-  dusk: {
-    zenith: '#1a1d52', mid: '#9a5c9c', horizon: '#ff8c6e', fog: '#b9657e', sun: '#ff9b6e', cloud: '#ffb0a8', cloudShadow: '#5a3a6e',
-    hemiSky: '#7a78c0', hemiGround: '#3f2d40', waterDeep: '#141638', waterScatter: '#3a2b62', light: '#ffab86',
-    sunElev: 4.5, sunAz: -30, sunDisc: 9, sunLight: 2.0, fogDensity: 0.0007, fogStart: 200, fogHeight: 0.001, fogFalloff: 0.014,
-    glow: 0.5, cloudCover: 0.5, hemi: 1.05, stars: 0.25, exposure: 1.05, bloom: 0.58, env: 0.8,
-  },
-  twilight: {
-    zenith: '#0b1236', mid: '#5a4696', horizon: '#e27566', fog: '#6e4c7e', sun: '#ff8456', cloud: '#e98a90', cloudShadow: '#2b2248',
-    hemiSky: '#6c78c8', hemiGround: '#2c2340', waterDeep: '#0b1030', waterScatter: '#2c2c6a', light: '#ffb49a',
-    sunElev: 1.4, sunAz: -24, sunDisc: 9, sunLight: 1.5, fogDensity: 0.00062, fogStart: 220, fogHeight: 0.0008, fogFalloff: 0.014,
-    glow: 0.6, cloudCover: 0.35, hemi: 1.15, stars: 0.85, exposure: 1.1, bloom: 0.6, env: 0.9,
-  },
-};
-export const PALETTES = {};
-const PALETTE_KEYS = [
-  { at: 0, name: 'sunset' }, { at: 4200, name: 'sunset' }, { at: 5400, name: 'canyon' }, { at: 7400, name: 'canyon' },
-  { at: 8600, name: 'dusk' }, { at: 10200, name: 'dusk' }, { at: 11300, name: 'twilight' },
-];
-const envMaps = {};
 let currentEnv = null;
 const curPal = {};
 
 export function paletteAt(d, out = curPal) {
-  let a = PALETTE_KEYS[0], b = PALETTE_KEYS[0];
-  for (let i = 0; i < PALETTE_KEYS.length; i++) {
-    if (PALETTE_KEYS[i].at <= d) { a = PALETTE_KEYS[i]; b = PALETTE_KEYS[Math.min(i + 1, PALETTE_KEYS.length - 1)]; }
+  const KEYS = SW.paletteKeys, PAL = SW._pal;
+  let a = KEYS[0], b = KEYS[0];
+  for (let i = 0; i < KEYS.length; i++) {
+    if (KEYS[i].at <= d) { a = KEYS[i]; b = KEYS[Math.min(i + 1, KEYS.length - 1)]; }
   }
   const t = b.at > a.at ? smoothstep(a.at, b.at, d) : 0;
-  lerpPalette(PALETTES[a.name], PALETTES[b.name], t, out);
+  lerpPalette(PAL[a.name], PAL[b.name], t, out);
   out._dominant = t < 0.5 ? a.name : b.name;
   return out;
 }
 
 // ============================================================ Init / update
 export function initWorld() {
-  for (const k in RAW_PALETTES) PALETTES[k] = preparePalette(RAW_PALETTES[k]);
   terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.93, metalness: 0.0, envMapIntensity: 0.55 });
   patchFog(terrainMat);
   initDecorations();
   createWater();
   createClouds();
-  for (const k in PALETTES) envMaps[k] = makeEnvMap(PALETTES[k]);
+}
+
+// Switch the world to a stage: geography, palettes (prepared once per stage, with their env maps), sea and clouds.
+export function useStageWorld(def) {
+  SW = def.world;
+  zoneW = SW.zoneW; pathX = SW.pathX; terrainHeight = SW.terrainHeight; faceColor = SW.faceColor;
+  if (!SW._pal) {
+    SW._pal = {}; SW._env = {};
+    for (const k in SW.palettes) SW._pal[k] = preparePalette(SW.palettes[k]);
+    for (const k in SW._pal) SW._env[k] = makeEnvMap(SW._pal[k]);
+  }
+  water.visible = SW.water !== false;
+  clouds.visible = SW.clouds !== false;
+  resetTerrain();
 }
 
 export function setWorldAtmosphere(d) {
@@ -740,7 +482,7 @@ export function setWorldAtmosphere(d) {
   WATER_U.uScatter.value.copy(p.waterScatter);
   WATER_U.fogColor.value.copy(p.fog);
   WATER_U.fogDensity.value = p.fogDensity;
-  const env = envMaps[p._dominant];
+  const env = SW._env[p._dominant];
   if (env && env !== currentEnv) { G.scene.environment = env; currentEnv = env; }
   return p;
 }
@@ -751,5 +493,5 @@ export function updateWorld(dt, d, focus) {
   updateTerrain(d);
   const cam = G.camera.position;
   water.position.set(Math.round(cam.x / 50) * 50, 0, Math.round(cam.z / 50) * 50);
-  updateClouds(d, p.cloudCover);
+  if (clouds.visible) updateClouds(d, p.cloudCover);
 }

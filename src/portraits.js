@@ -12,7 +12,7 @@ export const CHARACTERS = {
   gantetsu: { name: 'GANTETSU', nameJa: 'ガンテツ', role: 'LANCER 3', color: '#b7c4a0' },
   rio:      { name: 'RIO',      nameJa: 'リオ',     role: 'LANCER 4', color: '#5ee0c8' },
   hou:      { name: 'HQ',       nameJa: 'ホウ司令', role: 'COMMAND',  color: '#ffd166' },
-  mizuchi:  { name: 'MIZUCHI',  nameJa: 'ミズチ',   role: 'UNKNOWN',  color: '#ff3355' },
+  mizuchi:  { name: 'MIZUCHI',  nameJa: 'ミズチ',   role: 'UNKNOWN',  color: '#ff3355', enemy: true },
 };
 
 const STYLE = '<style>.pm-open,.pe-closed{display:none}svg.open .pm-open,svg.blink .pe-closed{display:inline}svg.open .pm-closed,svg.blink .pe-open{display:none}</style>';

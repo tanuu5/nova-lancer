@@ -226,6 +226,12 @@ export class Boss {
     if (this.turretsLeft() === 0) this.enterPhase2();
   }
   turretsLeft() { let n = 0; for (const s of this.segs) if (s.turret && s.turret.alive) n++; return n; }
+  // where the dev-build test bot aims: a surfaced turret, else the open mouth's core, else the head
+  botAim() {
+    for (const sg of this.segs) if (sg.turret && sg.turret.alive && sg.pos.y > 0) return sg.turret.pos;
+    if (this.jawOpen > 0.5) return this.coreT.pos;
+    return this.headPos;
+  }
 
   enterPhase2() {
     this.phase = 'p2'; this.pt = 0; this.sub = 'weave'; this.subT = 1.5;
@@ -580,5 +586,9 @@ export class Boss {
   }
 }
 
+// One instance per boss, built the first time a stage asks for it; BOSS.inst is the current stage's boss.
+const BUILD = { mizuchi: () => new Boss() };
+const built = {};
 export const BOSS = { inst: null };
-export function initBoss() { BOSS.inst = new Boss(); }
+export function useBoss(id) { BOSS.inst = built[id] || (built[id] = BUILD[id]()); }
+export function initBoss() { useBoss('mizuchi'); }
