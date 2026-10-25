@@ -49,7 +49,16 @@ class Talker {
     if (this.shown < this.chars.length) { this.text.textContent = this.lines[this.i].text; this.shown = this.chars.length; }
     else { AudioSys.sfx('uiMove'); this.next(); }
   }
-  finish() { this.i = this.lines.length - 1; this.next(); }
+  // jump to the last line, shown in full
+  finish() {
+    if (this.done) return;
+    this.i = this.lines.length - 2;
+    this.next();
+    this.text.textContent = this.lines[this.i].text;
+    this.shown = this.chars.length;
+    this.svg?.classList.remove('open');
+    this.done = true;
+  }
   update(rdt) {
     if (this.done) return;
     if (this.shown < this.chars.length) {
@@ -113,10 +122,14 @@ export function openBriefing(def, opts) {
 }
 function updateBriefing(rdt) {
   T.br.update(rdt);
-  if (!T.br.done) {
-    if (Input.pressed('confirm')) T.br.advance();
-    else if (Input.pressed('pause') || Input.pressed('back')) T.br.finish();
-    if (T.br.done) { $('br-menu').hidden = false; $('br-skip').hidden = true; setMenu(M.br); M.br.focus(0); $('br-menu').scrollIntoView({ block: 'nearest' }); }
+  const menu = $('br-menu');
+  if (menu.hidden) {
+    if (!T.br.done) {
+      if (Input.pressed('confirm')) T.br.advance();
+      else if (Input.pressed('pause') || Input.pressed('back')) T.br.finish();
+    }
+    // the lines can also end between frames, from the SKIP button or a tap on the comm box
+    if (T.br.done) { menu.hidden = false; $('br-skip').hidden = true; setMenu(M.br); M.br.focus(0); menu.scrollIntoView({ block: 'nearest' }); }
     return;
   }
   if (Input.pressed('back')) { AudioSys.sfx('uiBack'); CB.onBack(); return; }

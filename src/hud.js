@@ -55,17 +55,19 @@ export class Menu {
   constructor(el, handler) {
     this.el = el; this.handler = handler; this.i = 0;
     this.items = [...el.querySelectorAll('.mi')];
-    this.items.forEach((it, i) => {
-      it.addEventListener('mouseenter', () => this.focus(i, true));
+    this.items.forEach((it) => {
+      it.addEventListener('mouseenter', () => this.focusItem(it, true));
       it.addEventListener('click', (e) => {
         if (it.tagName === 'LABEL') return;
-        e.preventDefault(); this.focus(i); AudioSys.init(); this.activate();
+        e.preventDefault(); this.focusItem(it); AudioSys.init(); this.activate();
       });
       const input = it.querySelector('input');
-      if (input) input.addEventListener('input', () => { this.focus(i); this.handler(it.dataset.act, 0, input); });
+      if (input) input.addEventListener('input', () => { this.focusItem(it); this.handler(it.dataset.act, 0, input); });
     });
   }
   visibleItems() { return this.items.filter(it => !it.hidden && it.offsetParent !== null); }
+  // focus() counts visible items only, and some items can be hidden (つづきから, ミッション選択, results)
+  focusItem(it, silent) { const i = this.visibleItems().indexOf(it); if (i >= 0) this.focus(i, silent); }
   focus(i, silent) {
     const vis = this.visibleItems();
     if (!vis.length) return;
