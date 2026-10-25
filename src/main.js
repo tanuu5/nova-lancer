@@ -2,11 +2,11 @@
 import * as THREE from 'three';
 import {
   G, loadSettings, saveSettings, newRun, updateTimers, clearTimers, on, emit, clamp, lerp, damp,
-  loadBest, saveBest, easeInOutCubic, easeOutCubic, rand, after,
+  loadBest, saveBest, easeInOutCubic, easeOutCubic, rand, after, mulberry32,
 } from './core.js';
 import { initInput, updateInput, endInputFrame, Input } from './input.js';
 import { initRenderer, createSky, createLights, makeTextures, renderFrame, updatePost, updateLights, POST, applyQuality, ATMO, GFX } from './gfx.js';
-import { initWorld, updateWorld, updateTerrain, resetTerrain, setWorldAtmosphere, railFrame, railToWorld, terrainHeight, worldToRail } from './world.js';
+import { initWorld, updateWorld, updateTerrain, resetTerrain, setWorldAtmosphere, railFrame, railToWorld, terrainHeight, worldToRail, pathX, paletteAt, __worldDebug } from './world.js';
 import { initFX, beginFXFrame, updateFX, clearFX, bigFlash, addShake, FX, explode } from './fx.js';
 import { PlayerShip, updateCamera, resetCamera, CAM } from './ship.js';
 import { updatePlayerWeapons, updateEnemyBullets, clearWeapons, resetCharge, WSTATE, ebullets } from './weapons.js';
@@ -87,6 +87,40 @@ async function boot() {
     __step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) frame(dt); return { state: G.state, d: Math.round(G.rail.d), hits: G.run.hits, shield: G.run.shield }; },
     enemies, WSTATE, ebullets, explode,
     __key: (code, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code })),
+    // Regression helpers: a seeded Math.random makes a __bot run repeatable, __snap/__fp summarise game state and the world.
+    __seed: (s) => { Math.random = mulberry32(s); },
+    __snap: () => {
+      const r = G.run, B = BOSS.inst, n = (v) => Math.round(v * 100) / 100;
+      return [G.state, n(G.rail.d), r.hits, r.score, n(r.shield), r.lives, r.deaths, enemies.length, B.active ? n(B.hp) : -1,
+        document.getElementById('rtext').textContent, document.querySelector('#banner .b-big').textContent, n(ship.pos.x), n(ship.pos.y), n(ship.pos.z)].join('|');
+    },
+    __fp: () => {
+      const mix = (h, v) => (Math.imul(h, 31) + v) | 0;
+      const hashArr = (h, a) => { const iv = new Int32Array(a.buffer, a.byteOffset, a.length); for (let i = 0; i < iv.length; i++) h = mix(h, iv[i]); return h; };
+      let hT = 0;
+      for (let d = 0; d <= 12000; d += 40) {
+        const cx = pathX(d);
+        hT = mix(hT, Math.round(cx * 1000));
+        for (let x = -1600; x <= 1600; x += 27) hT = mix(hT, Math.round(terrainHeight(cx + x, -d) * 1000));
+      }
+      const hC = [];
+      for (const d of [0, 2000, 4500, 6500, 8500, 10800]) {
+        resetTerrain(); updateTerrain(d, true);
+        let h = 0;
+        for (const ci of [...__worldDebug.chunks.keys()].sort((a, b) => a - b)) {
+          const g = __worldDebug.chunks.get(ci).geometry.attributes;
+          h = hashArr(hashArr(hashArr(h, g.position.array), g.normal.array), g.color.array);
+          for (const o of __worldDebug.decoByChunk.get(ci) || []) h = hashArr(mix(h, o.count), o.instanceMatrix.array);
+        }
+        hC.push(h);
+      }
+      resetTerrain(); updateTerrain(G.rail.d, true);
+      const pal = [0, 3000, 5000, 7000, 9000, 10500, 11500].map(d => {
+        const p = paletteAt(d, {});
+        return Object.keys(p).sort().map(k => k + '=' + (p[k]?.isColor ? p[k].getHexString() : typeof p[k] === 'number' ? p[k].toFixed(5) : p[k])).join(',');
+      });
+      return { hT, hC: hC.join(','), pal: pal.join(' / ') };
+    },
     // test bot: steer toward the nearest enemy ahead and tap fire
     __bot: (n = 60, opts = {}) => {
       const key = (code, down) => window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code }));
@@ -116,11 +150,19 @@ async function boot() {
 }
 
 // Pause automatically when the page loses focus mid-mission.
-window.addEventListener('blur', () => { if (G.state === 'play' && !S.intro) pause(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play' && !S.intro) pause(); });
+// (Dev builds: `window.__manual = true` hands every frame to __step/__bot, for repeatable test runs.
+//  `?manual&seed=N` in the URL turns that on from the first frame and seeds Math.random before boot.)
+const manual = () => __DEV__ && window.__manual;
+if (__DEV__) {
+  const q = new URLSearchParams(location.search);
+  if (q.has('manual')) window.__manual = true;
+  if (q.has('seed')) Math.random = mulberry32(+q.get('seed') || 1);
+}
+window.addEventListener('blur', () => { if (G.state === 'play' && !S.intro && !manual()) pause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play' && !S.intro && !manual()) pause(); });
 
-// Unlock audio on any genuine user gesture.
-for (const ev of ['keydown', 'pointerdown', 'touchstart', 'mousedown']) window.addEventListener(ev, () => AudioSys.init(), { passive: true });
+// Unlock audio on any genuine user gesture. (Test runs stay silent: sound effects are throttled in real time.)
+for (const ev of ['keydown', 'pointerdown', 'touchstart', 'mousedown']) window.addEventListener(ev, () => { if (!manual()) AudioSys.init(); }, { passive: true });
 
 // ============================================================ Game events
 function wireEvents() {
@@ -508,6 +550,7 @@ function loop(now) {
   requestAnimationFrame(loop);
   let rdt = (now - last) / 1000;
   last = now;
+  if (manual()) return;
   if (!(rdt > 0)) rdt = 0.016;
   frame(Math.min(rdt, 0.05));
 }

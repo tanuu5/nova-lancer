@@ -215,6 +215,7 @@ function faceColor(x, y, z, ny, out) {
 let terrainMat = null;
 const chunks = new Map();
 const decoByChunk = new Map();
+export const __worldDebug = { chunks, decoByChunk };   // read by the dev-build fingerprint (main.js __fp)
 
 function buildChunk(ci) {
   const d0 = ci * CHUNK;
