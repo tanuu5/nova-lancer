@@ -232,7 +232,7 @@ export function openSelect(onPick, onBack) {
     const b = P.best[m.id];
     return `<button class="mi${ok ? '' : ' locked'}" data-act="${ok ? 'm' + m.no : 'locked'}">
       <span class="m-no">MISSION ${pad2(m.no)}</span><span class="m-name">${ok ? m.title : '？？？'}</span>
-      <span class="m-best">${ok && b ? `BEST <b>${b.score.toLocaleString()}</b><br>RANK <b>${b.rank}</b>${b.medal ? '　MEDAL' : ''}` : ''}</span>
+      <span class="m-best">${ok && b ? `BEST <b>${b.score.toLocaleString()}</b><br>RANK <b>${b.rank}</b>${b.medal ? '　MEDAL' : ''}${P.found?.[m.id] ? '　かけら<b>◆</b>' : ''}` : ''}</span>
       <span class="m-place">${ok ? m.place : ''}</span></button>`;
   }).join('');
   $('sel-actions').innerHTML = '<button class="mi" data-act="back"><span>戻る</span><span class="en">BACK</span></button>';

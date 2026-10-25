@@ -5,7 +5,8 @@
 //   world: { zoneW, pathX, terrainHeight, faceColor, decorate, palettes, paletteKeys, water, clouds }
 //   script(at)                                 registers events with at(distance, fn) and schedules props
 //   onSetup(d, run), onClear(run), absent(run) hooks around (re)starts and the clear sequence
-//   boss: { id, en, title, bar, voice, intro } + onBossPhase / onBossCharge / onBossDying
+//   boss: { id, en, title, bar, introLines: [{ who, text, hold }], bannerAt } + onBossPhase / onBossCharge / onBossDying
+//   clearTime, onFragment()                    length of the clear orbit (default 8.5 s); reaction to the spear fragment
 //   rank: { S, A, B, medal }, resultNote(run)  results screen
 //   map: { target }                            star-map body highlighted in the briefing (see screens.js)
 //   briefing: { lines: [{ who, text }], objective }, talk: [{ who, text }] (story mode, after the results)

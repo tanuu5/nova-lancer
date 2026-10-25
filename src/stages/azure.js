@@ -9,6 +9,7 @@ import { scheduleProp, spawnProp } from '../props.js';
 import { radio, tip, warning, addMarker } from '../hud.js';
 import { WING, setWingStance, holdOut } from '../wingmen.js';
 import { AudioSys } from '../audio.js';
+import { crossView } from '../flyby.js';
 import { D, K, vWing, snake, fromBehind, holders, ringOf, crossing, divers, turret, mine } from '../level.js';
 
 // ============================================================ Zones & rail path
@@ -308,7 +309,7 @@ const WING_REAR_AT = 640;   // the wingmen fly in front until here, then mostly 
 
 function script(at) {
   // ===== OCEAN =====
-  at(120, () => radio('hou', 'こちらホウ司令。ランサー隊、アクエリア沿岸に敵の侵攻部隊を確認した。全機、迎撃に向かえ！', { hold: 2.2 }));
+  at(120, () => radio('hou', 'こちらホウ。所属不明機の編隊を捕捉した。全機、迎撃せよ！', { hold: 2.2 }));
   at(520, () => radio('kota', 'よーし、いっくぞー！　隊長、しっかりついてくからね！'));
   at(330, () => tip(`${K('W')}${K('A')}${K('S')}${K('D')} / 矢印キー：移動　${K('J')} / ${K('Space')}：ショット`, 6, '左下をドラッグで移動 ／ FIRE でショット'));
   at(WING_REAR_AT, () => setWingStance('rear', 0.5));   // after Kota's "I'll stick with you": the squadron drops back to cover the leader
@@ -362,6 +363,7 @@ function script(at) {
   scheduleProp('ring', 1150, { u: 0, v: 22 });
   scheduleProp('arch', 2650, { u: 0 });
   scheduleProp('ring', 2650, { u: 0, v: 14 });
+  scheduleProp('fragment', 2650, { u: 0, v: 53 });   // 槍のかけら①: over the arch instead of through it
   scheduleProp('stack', 2960, { u: -28, scale: 1 });
   scheduleProp('stack', 3080, { u: 32, scale: 1.1 });
   scheduleProp('stack', 3230, { u: 2, scale: 0.9 });
@@ -431,7 +433,7 @@ function rescueKota() {
 // ------------------------------------------------------------ Boss radio
 let firstCharge = true;   // the beam warning is given once per session
 function onBossPhase(p) {
-  if (p === 1) { radio('rio', 'あれが敵の新型……ミズチ！　まず背中の砲台を叩いて！', { prio: 1 }); }
+  if (p === 1) { radio('rio', 'まずは背中の砲台を叩いて！', { prio: 1 }); }
   if (p === 2) { radio('rio', '砲台は全滅！　口が開いた瞬間、中のコアを狙って！', { prio: 2 }); }
   if (p === 3) { radio('mizuchi', '……ハイジョ……ハイジョ、スル……', { prio: 2, hold: 1.2 }); radio('kota', 'お、怒ってる！？　みんな気をつけて！'); }
 }
@@ -455,18 +457,31 @@ export default {
   script,
   // restarting past the rescue after Kota bailed out: he stays out of the fight
   onSetup(d, run) { if (run.kotaLost && d > 3850) WING.byId.kota.hide(); },
-  boss: { id: 'mizuchi', en: 'MIZUCHI', title: '海竜型機動兵器　ミズチ', bar: '海竜型機動兵器 ミズチ', voice: 'mizuchi', intro: '……侵入者ヲ確認。排除スル。' },
+  // The first machine beast: Rio recognises the sea dragon of her grandmother's tales, and HQ adopts the name.
+  boss: {
+    id: 'mizuchi', en: 'MIZUCHI', title: '機械獣　ミズチ', bar: '機械獣 ミズチ', bannerAt: 4.6,
+    introLines: [
+      { who: 'mizuchi', text: '……侵入者ヲ確認。排除スル。', hold: 0.8 },
+      { who: 'rio', text: 'ミズチ……おばあちゃんの昔話の海竜と同じ……！', hold: 1.0 },
+      { who: 'hou', text: '……以後、目標を「ミズチ」と呼称する。各機、迎撃せよ！', hold: 1.2 },
+    ],
+  },
   onBossPhase, onBossCharge, onBossDying,
+  // While the squadron circles, a black machine crosses far above (it returns in mission 04). The radio is quiet
+  // while it passes: on phones the radio panel sits across the top of the screen, where the sky is.
+  clearTime: 13.6,
   onClear(run) {
     after(1.4, () => run.kotaLost
       ? radio('rio', '目標の沈黙を確認。……お見事よ、隊長。', { prio: 2 })
       : radio('kota', 'やったー！　隊長、最高だよ！', { prio: 2 }));
-    after(1.5, () => radio('gantetsu', '見事な腕だ。……帰還するぞ。'));
-    after(1.6, () => radio('hou', 'よくやった、ランサー隊。アクエリアは守られた。', { hold: 2.4 }));
+    after(1.6, () => radio('hou', 'よくやった、ランサー隊。アクエリアは守られた。', { hold: 1.2 }));
+    after(7.0, () => { crossView('ibuki'); AudioSys.sfx('roll', { vol: 0.45, pitch: 0.6 }); });
+    after(9.2, () => { radio('gantetsu', '……今の機体は……', { prio: 1, hold: 1.6 }); radio('rio', '……レーダーには、何も映っていないわ。', { hold: 1.6 }); });
   },
+  onFragment() { radio('rio', '今の光……何かの破片？　ずいぶん古い金属みたい……', { prio: 1 }); },
   absent(run) { return run.kotaLost ? ['kota'] : []; },   // wingmen missing from the clear formation
   rank: { S: 125, A: 100, B: 70, medal: 115 },             // hits needed (S also needs no deaths)
-  resultNote(run) { return run.savedKota ? 'コタ救出 <b>成功</b>' : 'コタ救出 <b>失敗</b>'; },
+  resultNote(run) { return (run.savedKota ? 'コタ救出 <b>成功</b>' : 'コタ救出 <b>失敗</b>') + (run.gotFrag ? '　槍のかけら <b>取得</b>' : ''); },
   squadAfter(run, squad) { return run.kotaLost ? squad | 1 : squad; },   // Kota bailed out: under repair at the start of mission 02
 
   // ---- story mode

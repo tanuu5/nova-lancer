@@ -105,6 +105,7 @@ export const SCHEMES = {
   kota:     { hull: '#f1ece6', accent: '#ff7a2a', accent2: '#3fc46a', glow: '#ffb070', stripe: '#ff7a2a' },
   gantetsu: { hull: '#d9dccf', accent: '#6f8a3a', accent2: '#e0b040', glow: '#c8ff9a', stripe: '#6f8a3a' },
   rio:      { hull: '#e6f0f2', accent: '#18b3a0', accent2: '#2a3d8f', glow: '#7ffff0', stripe: '#18b3a0' },
+  ibuki:    { hull: '#1b1d23', accent: '#c4162a', accent2: '#5a0a12', glow: '#ff3a3a', stripe: '#c4162a' },   // the black machine
 };
 
 const flameMatCache = new Map();

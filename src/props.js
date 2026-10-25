@@ -1,4 +1,4 @@
-// Level props: rings, items, rock arches, sea stacks, toppling pillars, bridges, towers and energy gates.
+// Level props: rings, items, spear fragments, rock arches, sea stacks, toppling pillars, bridges, towers and energy gates.
 import * as THREE from 'three';
 import { G, rand, clamp, lerp, damp, TAU, emit, Simplex2, easeInCubic, easeOutCubic } from './core.js';
 import { railFrame, railToWorld, groundHeight, emissiveVertexMaterial, mergeGeometries } from './world.js';
@@ -64,6 +64,9 @@ function buildGeos() {
   GEO.itemBomb = mergeGeometries([paint(new THREE.CapsuleGeometry(1.1, 1.8, 4, 8).rotateZ(Math.PI / 2), '#ff5a2a', 0.5), paint(new THREE.TorusGeometry(2.4, 0.22, 6, 24), '#ffd1b0', 0.6),
     ...[0, 1, 2, 3].map(i => paint(new THREE.BoxGeometry(0.1, 1.2, 0.8).translate(0, 0.9, 0).rotateX(i * Math.PI / 2).translate(1.6, 0, 0), '#3a3e46'))]);
   GEO.itemShield = mergeGeometries([paint(new THREE.IcosahedronGeometry(1.5, 0), '#46b8ff', 0.9), paint(new THREE.TorusGeometry(2.4, 0.22, 6, 24), '#cfe9ff', 0.6)]);
+  // Spear fragment: a long pale-gold blade shard inside a thin halo
+  GEO.fragment = mergeGeometries([paint(new THREE.OctahedronGeometry(1.5, 0).scale(0.55, 2.7, 0.3), '#fff4cc', 1),
+    paint(new THREE.TorusGeometry(3.1, 0.16, 6, 32), '#ffc94a', 0.7)]);
 }
 
 function initMaterials() {
@@ -189,6 +192,31 @@ export class Item extends Prop {
     if (P.alive && P.pos.distanceTo(wp) < 7.5) {
       emit('item', this.kind, this);
       sparks(wp, null, 20, c, 30, 1);
+      this.dispose();
+    }
+  }
+}
+
+// ---------------------------------------------------------------- Legendary spear fragment (one hidden in each of missions 1–6)
+class Fragment extends Prop {
+  constructor(s, o) {
+    super('fragment', s, o);
+    this.mesh = new THREE.Mesh(GEO.fragment, itemMats);
+    this.mesh.position.set(this.u, this.v, 0);
+    this.mesh.scale.setScalar(1.5);
+    this.root.add(this.mesh);
+  }
+  update(dt) {
+    this.t += dt;
+    this.mesh.rotation.y = this.t * 1.6;
+    this.mesh.rotation.z = Math.sin(this.t * 1.3) * 0.2;
+    this.mesh.position.y = this.v + Math.sin(this.t * 2.2) * 0.8;
+    const wp = railToWorld(this.s, this.u, this.mesh.position.y, _v);
+    glow(wp, 15 + Math.sin(this.t * 5) * 2.5, 1.5, 1.15, 0.5, 0.9);
+    const P = G.player;
+    if (P.alive && P.pos.distanceTo(wp) < 8) {
+      emit('fragment', this);
+      sparks(wp, null, 36, [4, 3.2, 1.2], 40, 1);
       this.dispose();
     }
   }
@@ -419,7 +447,7 @@ function hitObstacle(pushU, pushV) {
 }
 
 // ============================================================ Manager
-const TYPES = { ring: Ring, item: Item, arch: Arch, stack: Stack, pillar: Pillar, bridge: Bridge, tower: Tower, gate: Gate };
+const TYPES = { ring: Ring, item: Item, fragment: Fragment, arch: Arch, stack: Stack, pillar: Pillar, bridge: Bridge, tower: Tower, gate: Gate };
 
 export function initProps() { buildGeos(); initMaterials(); }
 

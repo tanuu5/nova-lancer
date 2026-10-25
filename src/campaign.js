@@ -32,6 +32,7 @@ function loadProgress() {
   p.story ||= null;           // { stage: index of the mission to play next, carry }
   p.seen ||= {};
   p.seen.chars ||= {};
+  p.found ||= {};             // missions whose spear fragment has been picked up at least once
   return p;
 }
 

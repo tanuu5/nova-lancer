@@ -14,6 +14,7 @@ import { updateEnemies, clearEnemies, warmEnemies, unwarmEnemies, enemies } from
 import { initProps, updateProps, spawnProp } from './props.js';
 import { initWingmen, resetWingmen, updateWingmen, updateWingmenTrails, setWingMode, setWingStance, sortieAll, WING } from './wingmen.js';
 import { initBoss, useBoss, BOSS } from './boss.js';
+import { updateFlybys, clearFlybys } from './flyby.js';
 import { initLevel, loadStageScript, startLevel, updateLevel } from './level.js';
 import { STAGES, MISSIONS, PROLOGUE } from './stages/index.js';
 import { CAMP, freshCarry, progress, saveProgress, saveStoryPoint, recordClear, markSeen, encodePassword } from './campaign.js';
@@ -252,6 +253,18 @@ function wireEvents() {
     if (left === 2) radio('rio', '砲台、残り2基よ！');
   });
   on('bombUsed', () => once('bomb', () => radio('kota', 'ボムだー！　どっかーん！')));
+  // legendary spear fragment: one bit per mission, carried through the story (all six → the true ending)
+  on('fragment', () => {
+    const run = G.run;
+    run.frags = (run.frags || 0) | (1 << (CUR.no - 1));
+    run.gotFrag = true;
+    const P = progress();
+    P.found ||= {};
+    if (!P.found[CUR.id]) { P.found[CUR.id] = true; saveProgress(); }
+    AudioSys.sfx('extraLife');
+    tip('伝説の槍のかけらを手に入れた', 3.5);
+    CUR.onFragment?.();
+  });
 
   on('radioStart', (who) => markSeen(who));   // the character page unlocks whoever has been on the radio
 
@@ -304,6 +317,7 @@ function enterTitle(first) {
   S.t = 0;
   S.focus = null;
   closeScreens();
+  clearFlybys();
   refreshTitleInfo();
   showScreen('title');
   titleReset();
@@ -409,7 +423,7 @@ function startMission() {
 
 // Prepare the world for play starting at distance d
 function setupStage(d, intro) {
-  hideScreens(); closeScreens();
+  hideScreens(); closeScreens(); clearFlybys();
   G.state = 'play';
   G.paused = false;
   G.slowMo = 1;
@@ -490,9 +504,9 @@ function startBoss() {
   S.bossCine = { t: 0 };
   POST.letterbox = 1;
   const info = CUR.boss;
-  radio(info.voice, info.intro, { prio: 2, hold: 1.2 });
-  after(3.2, () => { banner('WARNING', info.en, info.title, 3, 'boss'); });
-  after(6.2, () => bossBar(true, info));
+  info.introLines.forEach((L, i) => radio(L.who, L.text, { prio: i === 0 ? 2 : 0, hold: L.hold ?? 1.2 }));
+  after(info.bannerAt ?? 3.2, () => { banner('WARNING', info.en, info.title, 3, 'boss'); });
+  after(6.2, () => { if (B.active && B.phase !== 'dying') bossBar(true, info); });
 }
 
 function startClear() {
@@ -830,7 +844,7 @@ function updateClear(dt, rdt) {
   ship.boosting = S.t > 4.5;
   simulate(dt, rdt, false);
   if (S.t > 4.5 && S.t < 4.6) { AudioSys.sfx('boost'); addShake(0.2); }
-  if (S.t > 8.5 && !S.clearDone) { S.clearDone = true; fadeTo(0.55, 0.8, finishRun); }
+  if (S.t > (CUR.clearTime ?? 8.5) && !S.clearDone) { S.clearDone = true; fadeTo(0.55, 0.8, finishRun); }
 }
 
 // Continuous engine hum while the player's ship is flying in a mission.
@@ -855,6 +869,7 @@ function simulate(dt, rdt, gameplay) {
   updateLights(dt, ship.pos);
   ship.updateTrails(G.camera.position);
   updateWingmenTrails(G.camera.position);
+  updateFlybys(dt);
   updateFX(dt);
   updateHUD(dt, rdt);
 }
