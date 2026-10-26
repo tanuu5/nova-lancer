@@ -12,7 +12,7 @@ import { PlayerShip, updateCamera, resetCamera, CAM } from './ship.js';
 import { updatePlayerWeapons, updateEnemyBullets, clearWeapons, resetCharge, WSTATE, ebullets } from './weapons.js';
 import { updateEnemies, clearEnemies, warmEnemies, unwarmEnemies, enemies } from './enemies.js';
 import { initProps, updateProps, spawnProp } from './props.js';
-import { initWingmen, resetWingmen, updateWingmen, updateWingmenTrails, setWingMode, setWingStance, sortieAll, WING } from './wingmen.js';
+import { initWingmen, resetWingmen, updateWingmen, updateWingmenTrails, setWingMode, setWingStance, sortieAll, WING, kotaOr } from './wingmen.js';
 import { initBoss, useBoss, BOSS } from './boss.js';
 import { updateFlybys, clearFlybys } from './flyby.js';
 import { initLevel, loadStageScript, startLevel, updateLevel } from './level.js';
@@ -242,7 +242,7 @@ function wireEvents() {
   const once = (key, fn) => { const r = G.run; r.said ||= {}; if (r.said[key]) return; r.said[key] = true; fn(); };
   on('enemyKilled', () => {
     const h = G.run.hits;
-    if (h >= 50) once('h50', () => radio('kota', '撃墜数50突破！　隊長すごいや！'));
+    if (h >= 50) once('h50', () => kotaOr('撃墜数50突破！　隊長すごいや！', 'rio', '撃墜数50突破。さすがね、隊長。'));
     if (h >= 100) once('h100', () => radio('gantetsu', '100機撃墜か……腕を上げたな、隊長。'));
   });
   on('combo', (kills) => { if (kills >= 3) once('combo', () => radio('gantetsu', '見事なまとめ撃ちだ。その調子で行け。')); });
@@ -251,8 +251,8 @@ function wireEvents() {
     const r = G.run;
     if (r.shield > 0 && r.shield < r.maxShield * 0.3) once('low', () => radio('rio', 'シールド残量低下！　リングを探して回復して！', { prio: 1 }));
   });
-  on('ring', (kind) => { if (kind === 'gold') once('gold', () => radio('kota', '金色のリングだ！　3つ集めるといいことあるよ！')); });
-  on('bombUsed', () => once('bomb', () => radio('kota', 'ボムだー！　どっかーん！')));
+  on('ring', (kind) => { if (kind === 'gold') once('gold', () => kotaOr('金色のリングだ！　3つ集めるといいことあるよ！', 'rio', '金色のリングね。3つ集めると、いいことがあるわ。')); });
+  on('bombUsed', () => once('bomb', () => kotaOr('ボムだー！　どっかーん！', 'gantetsu', 'ボムか。思い切りがいいな。')));
   // legendary spear fragment: one bit per mission, carried through the story (all six → the true ending)
   on('fragment', () => {
     const run = G.run;

@@ -7,7 +7,7 @@ import { G, rand, lerp, smoothstep, Simplex2, fbm2, ridged2, mulberry32, hash2, 
 import { spawnEnemy, makeGroup } from '../enemies.js';
 import { scheduleProp, spawnProp } from '../props.js';
 import { radio, tip, warning, addMarker } from '../hud.js';
-import { WING, setWingStance, holdOut } from '../wingmen.js';
+import { WING, setWingStance, holdOut, kotaOr } from '../wingmen.js';
 import { AudioSys } from '../audio.js';
 import { crossView } from '../flyby.js';
 import { D, K, vWing, snake, fromBehind, holders, ringOf, crossing, divers, turret, mine } from '../level.js';
@@ -338,8 +338,8 @@ function script(at) {
   at(6150, () => { radio('rio', '中間地点を通過。いい調子よ、隊長。'); });
   at(6300, () => { turret(6720, -26, { onGround: false, v: 33 }); turret(6720, 26, { onGround: false, v: 33 }); radio('gantetsu', '橋の上に砲台だ。下をくぐるか、先に潰せ！'); });
   at(6700, () => { ringOf('drone', 10, 200, { r: 22, v: 30 }); });
-  at(7050, () => { for (let i = 0; i < 8; i++) mine(7450 + i * 45, rand(-30, 30), rand(10, 40)); radio('kota', '機雷だ！　近づくと爆発するよ！'); });
-  at(7300, () => { fromBehind('interceptor', 5); radio('kota', 'また後ろ！　しつこいなぁ、もう！', { prio: 1 }); });
+  at(7050, () => { for (let i = 0; i < 8; i++) mine(7450 + i * 45, rand(-30, 30), rand(10, 40)); kotaOr('機雷だ！　近づくと爆発するよ！', 'rio', '機雷よ！　近づくと爆発するわ！'); });
+  at(7300, () => { fromBehind('interceptor', 5); kotaOr('また後ろ！　しつこいなぁ、もう！', 'gantetsu', 'また後ろだ。抜かせてから撃て。', { prio: 1 }); });
   at(7700, () => { holders('raptor', 2, 170, { v: 30 }); crossing('drone', 6, 240, -1, 20); });
 
   // ===== FORTRESS =====
@@ -435,12 +435,12 @@ let firstCharge = true;   // the beam warning is given once per session
 function onBossPhase(p) {
   if (p === 1) { radio('rio', 'まずは背中の砲台を叩いて！', { prio: 1 }); }
   if (p === 2) { radio('rio', '砲台は全滅！　口が開いた瞬間、中のコアを狙って！', { prio: 2 }); }
-  if (p === 3) { radio('mizuchi', '……ハイジョ……ハイジョ、スル……', { prio: 2, hold: 1.2 }); radio('kota', 'お、怒ってる！？　みんな気をつけて！'); }
+  if (p === 3) { radio('mizuchi', '……ハイジョ……ハイジョ、スル……', { prio: 2, hold: 1.2 }); kotaOr('お、怒ってる！？　みんな気をつけて！', 'rio', '動きが変わった……！　みんな気をつけて！'); }
 }
 function onBossCharge() { if (firstCharge) { firstCharge = false; radio('gantetsu', 'ビームが来るぞ！　射線から外れろ！', { prio: 2, hold: 1 }); } }
 function onBossDying() { radio('mizuchi', 'ガ……ガガ……キノウ、テイ……シ……', { prio: 2, hold: 0.8 }); }
 function onBossPartDown(left) {   // turrets left on the back (6 at first)
-  if (left === 5) radio('kota', 'ひとつ潰した！　その調子！');
+  if (left === 5) kotaOr('ひとつ潰した！　その調子！', 'gantetsu', 'ひとつ潰した。その調子だ。');
   if (left === 2) radio('rio', '砲台、残り2基よ！');
 }
 

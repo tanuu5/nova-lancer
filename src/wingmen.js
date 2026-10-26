@@ -7,6 +7,7 @@ import { FX, Trail, glow, beam, sparks, explode } from './fx.js';
 import { buildShipModel, CAM } from './ship.js';
 import { enemies } from './enemies.js';
 import { AudioSys } from './audio.js';
+import { radio } from './hud.js';
 
 const _p = new THREE.Vector3(), _f = new THREE.Vector3(), _r = new THREE.Vector3(), _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _e = new THREE.Euler();
@@ -231,3 +232,7 @@ export function sortieAll(delay = 0, dur = 7) {
 }
 // Keep a wingman out in front for a while (e.g. after being rescued).
 export function holdOut(w, dur) { w.sortieT = Math.max(w.sortieT, dur); SORTIE.cool = Math.max(SORTIE.cool, dur + SORTIE_GAP); }
+// On the radio: not pulling out after being hit, and not away (bailed out, or still under repair).
+export const onAir = (id) => { const w = WING.byId[id]; return !!w && !w.gone && w.mode !== 'retreat'; };
+// Kota's line, or the same news from someone else, in their own words, while he is off the air.
+export function kotaOr(kotaText, who, text, opts) { if (onAir('kota')) radio('kota', kotaText, opts); else radio(who, text, opts); }

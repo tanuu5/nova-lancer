@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { G, rand, clamp, lerp, smoothstep, mulberry32, emit, after, easeInOutCubic, easeOutCubic } from '../core.js';
 import { scheduleProp, Prop, registerProp, hitObstacle, props } from '../props.js';
 import { radio, radioBusy, tip, warning } from '../hud.js';
-import { WING, setWingStance, holdOut } from '../wingmen.js';
+import { WING, setWingStance, holdOut, kotaOr } from '../wingmen.js';
 import { AudioSys } from '../audio.js';
 import { railFrame, railToWorld, mergeGeometries, emissiveVertexMaterial } from '../world.js';
 import { paint } from '../enemies.js';
@@ -244,10 +244,6 @@ function updateSeq() {
   while (SEQ.length && G.rail.d > SEQ[0].until) { const { L } = SEQ.shift(); if (typeof L === 'function') L(); }   // actions still run
   if (SEQ.length && !radioBusy()) { const { L } = SEQ.shift(); if (typeof L === 'function') L(); else radio(...L); }
 }
-
-const kotaHere = () => !WING.byId.kota.gone;
-// a line for Kota, or for someone else (in their own words) while he is away for repairs
-const kotaOr = (kotaText, who, text, opts) => (kotaHere() ? radio('kota', kotaText, opts) : radio(who, text, opts));
 
 function script(at) {
   // ===== DRIFT =====
