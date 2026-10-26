@@ -47,6 +47,7 @@ export function initLevel() {
   on('bossPhase', (p) => stage?.onBossPhase?.(p));
   on('bossCharge', () => stage?.onBossCharge?.());
   on('bossDying', () => stage?.onBossDying?.());
+  on('bossPartDown', (left) => stage?.onBossPartDown?.(left));
 }
 
 export function loadStageScript(def) {

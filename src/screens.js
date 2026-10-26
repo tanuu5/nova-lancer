@@ -104,7 +104,7 @@ export function initScreens() {
 }
 
 // ============================================================ Briefing
-// opts: { password (story only), onSortie, onBack }
+// opts: { password, carry (story only), onSortie, onBack }. briefing.lines may be a function of the carry (null outside the story).
 export function openBriefing(def, opts) {
   CB = opts;
   $('br-no').textContent = `MISSION ${pad2(def.no)}`;
@@ -118,7 +118,8 @@ export function openBriefing(def, opts) {
   $('br-skip').hidden = false;
   open('briefing', updateBriefing);
   setMenu(null);
-  T.br.play(def.briefing.lines);
+  const lines = def.briefing.lines;
+  T.br.play(typeof lines === 'function' ? lines(opts.carry) : lines);
 }
 function updateBriefing(rdt) {
   T.br.update(rdt);

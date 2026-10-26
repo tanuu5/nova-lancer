@@ -379,11 +379,11 @@ class Debris {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const d = this.items[i];
       d.life -= dt;
-      d.v.y -= 28 * dt;
+      if (!G.space) d.v.y -= 28 * dt;
       d.v.multiplyScalar(Math.exp(-0.4 * dt));
       d.p.addScaledVector(d.v, dt);
       d.r.addScaledVector(d.rv, dt);
-      const ground = d.p.y < 0.3 ? 0 : -999;
+      const ground = d.p.y < 0.3 && !G.space ? 0 : -999;
       if (d.life <= 0 || d.p.y < ground) {
         if (d.p.y < 0.5 && d.life > 0) splash(d.p, 0.35 * d.size);
         this.items.splice(i, 1);
@@ -505,8 +505,9 @@ export function bigFlash(strength = 1, color = [1, 1, 1]) {
   POST.flashColor.setRGB(color[0], color[1], color[2]);
 }
 
-// Water/terrain splash
+// Water/terrain splash (nothing where there is no sea)
 export function splash(pos, size = 1) {
+  if (!G.sea) return;
   const n = Math.round(10 * size) + 3;
   for (let i = 0; i < n; i++) {
     const a = Math.random() * TAU, r = rand(0, 2) * size;

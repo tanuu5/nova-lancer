@@ -23,6 +23,10 @@ export const ATMO = {
   uStars: { value: 0 },
   uTime: { value: 0 },
   uGlow: { value: new THREE.Color(0.1, 0.05, 0.02) },
+  // Space stages (see bakeSpaceSky): 0 = planet sky, 1 = nebula from uSpaceMap + stars, 2 = baking the nebula.
+  uSpace: { value: 0 },
+  uSpaceMap: { value: null },
+  uSpaceBand: { value: new THREE.Vector3(0.25, 1, 0.35).normalize() },
 };
 
 // Extra fog uniforms injected into every patched material (shared objects → global updates).
@@ -54,6 +58,49 @@ vec3 skyBase(vec3 d){
   float sd = max(dot(d, uSunDir), 0.0);
   col += sunGlowTerm(sd) * (1.0 - smoothstep(0.0, 0.5, h) * 0.7);
   col = mix(col, uGround + sunGlowTerm(sd), smoothstep(0.0, -0.05, d.y));
+  return col;
+}
+`;
+
+// Space sky (sky shader only): 3D value-noise nebula for the bake, and the runtime sky that colours the baked map.
+const GLSL_SPACE = /* glsl */`
+uniform float uSpace; uniform samplerCube uSpaceMap; uniform vec3 uSpaceBand;
+float vn3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(hash13(i), hash13(i + vec3(1.0, 0.0, 0.0)), f.x), mix(hash13(i + vec3(0.0, 1.0, 0.0)), hash13(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+             mix(mix(hash13(i + vec3(0.0, 0.0, 1.0)), hash13(i + vec3(1.0, 0.0, 1.0)), f.x), mix(hash13(i + vec3(0.0, 1.0, 1.0)), hash13(i + vec3(1.0, 1.0, 1.0)), f.x), f.y), f.z); }
+float fbmS(vec3 p, int oct){ float s = 0.0, a = 0.5, n = 0.0; for (int i = 0; i < 6; i++){ if (i >= oct) break; s += a * vn3(p); n += a; p = p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; } return s / n; }
+// r = nebula glow, g = colour mix, b = dark dust, a = bright cores. Brightest along a band (a great circle across the sky).
+vec4 spaceBake(vec3 d){
+  vec3 q = d * 2.3 + vec3(3.7, 1.2, 8.4);
+  vec3 w = vec3(fbmS(q, 4), fbmS(q + vec3(5.2, 1.3, 2.8), 4), fbmS(q + vec3(2.1, 7.7, 4.4), 4));
+  float n = fbmS(q * 1.4 + (w - 0.5) * 3.0, 6);
+  float band = exp(-pow(dot(d, uSpaceBand) * 2.0, 2.0));
+  float glowv = smoothstep(0.38, 0.72, n) * (0.2 + 0.8 * band);
+  float dust = smoothstep(0.52, 0.66, fbmS(q * 3.1 + (w - 0.5) * 4.0 + 11.0, 5)) * smoothstep(0.1, 0.6, band);
+  float mixc = smoothstep(0.35, 0.65, w.y);
+  float hi = smoothstep(0.62, 0.8, n) * band;
+  return vec4(glowv, mixc, dust, hi);
+}
+vec3 starField(vec3 d, float scale, float thresh, float size){
+  vec3 sp = d * scale; vec3 id = floor(sp); vec3 f = fract(sp) - 0.5;
+  float h = hash13(id);
+  if (h < thresh) return vec3(0.0);
+  vec3 o = vec3(hash13(id + 1.7), hash13(id + 3.1), hash13(id + 5.3)) - 0.5;
+  float r = length(f - o * 0.5);
+  float tw = 0.65 + 0.35 * sin(uTime * (1.3 + h * 2.7) + h * 311.0);
+  vec3 c = mix(vec3(0.7, 0.8, 1.0), vec3(1.0, 0.86, 0.72), fract(h * 53.7));
+  return c * (smoothstep(size, 0.0, r) + smoothstep(size * 3.0, 0.0, r) * 0.15) * tw;
+}
+vec3 spaceSky(vec3 d){
+  vec4 t = textureCube(uSpaceMap, d);
+  vec3 neb = mix(uMid, uHorizon, t.g) * t.r + uCloudColor * t.a * 0.9;
+  vec3 col = uZenith + neb * uCloudCover;
+  col = mix(col, uCloudShadow, clamp(t.b * 0.85, 0.0, 1.0));
+  vec3 st = starField(d, 300.0, 0.9965, 0.32) * 1.3 + starField(d, 90.0, 0.993, 0.16) * 2.6;
+  col += st * uStars * (1.0 - t.b * 0.85);
+  float sd = max(dot(d, uSunDir), 0.0);
+  col += sunGlowTerm(sd) * 0.7;
+  col += uSunColor * smoothstep(uSunSize - 0.00012, uSunSize + 0.00004, sd) * uSunDisc;
   return col;
 }
 `;
@@ -330,8 +377,11 @@ export function createSky() {
       varying vec3 vDir;
       ${GLSL_NOISE}
       ${GLSL_SKY}
+      ${GLSL_SPACE}
       void main(){
         vec3 d = normalize(vDir);
+        if (uSpace > 1.5) { gl_FragColor = spaceBake(d); return; }
+        if (uSpace > 0.5) { gl_FragColor = vec4(spaceSky(d), 1.0); return; }
         vec3 col = skyBase(d);
         float sd = dot(d, uSunDir);
         if (uStars > 0.001 && d.y > -0.02) {
@@ -427,15 +477,40 @@ let pmrem = null;
 export function makeEnvMap(palette) {
   if (!pmrem) pmrem = new THREE.PMREMGenerator(G.renderer);
   const envScene = new THREE.Scene();
-  const uniforms = THREE.UniformsUtils.clone(ATMO);
+  const mat = cloneSkyMaterial();
+  const uniforms = mat.uniforms;
   applyPaletteToUniforms(palette, uniforms);
   uniforms.uSunDisc.value = 6;
-  const mat = skyMesh.material.clone();
-  mat.uniforms = uniforms;
   const m = new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), mat);
   m.onBeforeRender = () => {};
   envScene.add(m);
   const rt = pmrem.fromScene(envScene, 0.02, 0.1, 200);
+  m.geometry.dispose(); mat.dispose();
+  return rt.texture;
+}
+
+// A copy of the sky material with its own uniforms (render-target textures can't be cloned, so the space map is shared).
+function cloneSkyMaterial() {
+  const map = ATMO.uSpaceMap.value;
+  ATMO.uSpaceMap.value = null;
+  const mat = skyMesh.material.clone();
+  ATMO.uSpaceMap.value = map;
+  mat.uniforms.uSpaceMap.value = map;
+  return mat;
+}
+
+// ============================================================ Space sky
+// The nebula is a lot of noise per pixel, so a space stage draws it once into a cube map; the sky then colours that
+// map with the current palette and adds the stars at full resolution. band: normal of the nebula's brightest plane.
+export function bakeSpaceSky(band) {
+  const rt = new THREE.WebGLCubeRenderTarget(512, { type: THREE.HalfFloatType, generateMipmaps: false });
+  const scene = new THREE.Scene();
+  const mat = cloneSkyMaterial();
+  mat.uniforms.uSpace.value = 2;
+  if (band) mat.uniforms.uSpaceBand.value.set(band[0], band[1], band[2]).normalize();
+  const m = new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), mat);
+  scene.add(m);
+  new THREE.CubeCamera(0.1, 200, rt).update(G.renderer, scene);
   m.geometry.dispose(); mat.dispose();
   return rt.texture;
 }

@@ -9,6 +9,7 @@ import { AudioSys } from './audio.js';
 import { loft, slab, fin, mirrorX } from './ship.js';
 import { paint } from './enemies.js';
 import { POST } from './gfx.js';
+import { Gashadokuro } from './gashadokuro.js';
 
 const hexS = (w, h, y = 0) => [[w, y], [w * 0.62, y + h], [-w * 0.62, y + h], [-w, y], [-w * 0.7, y - h * 0.8], [w * 0.7, y - h * 0.8]];
 const oct = (r, y = 0, sy = 1) => { const a = []; for (let i = 0; i < 8; i++) { const t = i / 8 * TAU; a.push([Math.cos(t) * r, y + Math.sin(t) * r * sy]); } return a; };
@@ -222,10 +223,16 @@ export class Boss {
     AudioSys.sfx('explodeL');
     addShake(0.35);
     seg.burn = 1;
-    emit('bossTurretDown', this.turretsLeft());
+    emit('bossPartDown', this.turretsLeft());
     if (this.turretsLeft() === 0) this.enterPhase2();
   }
   turretsLeft() { let n = 0; for (const s of this.segs) if (s.turret && s.turret.alive) n++; return n; }
+  // the head hides the sun's lens flare (sun = the sun's projected position)
+  blocksFlare(sun) {
+    if (!this.head.visible) return false;
+    _v2.copy(this.headPos).project(G.camera);
+    return Math.hypot(_v2.x - sun.x, _v2.y - sun.y) < 0.12 && _v2.z < 1;
+  }
   // where the dev-build test bot aims: a surfaced turret, else the open mouth's core, else the head
   botAim() {
     for (const sg of this.segs) if (sg.turret && sg.turret.alive && sg.pos.y > 0) return sg.turret.pos;
@@ -587,7 +594,7 @@ export class Boss {
 }
 
 // One instance per boss, built the first time a stage asks for it; BOSS.inst is the current stage's boss.
-const BUILD = { mizuchi: () => new Boss() };
+const BUILD = { mizuchi: () => new Boss(), gashadokuro: () => new Gashadokuro() };
 const built = {};
 export const BOSS = { inst: null };
 export function useBoss(id) { BOSS.inst = built[id] || (built[id] = BUILD[id]()); }

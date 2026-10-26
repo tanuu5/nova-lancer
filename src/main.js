@@ -38,6 +38,7 @@ let CUR = null;                                // the stage definition being pla
 
 // Load a stage: its world (course, terrain, palettes), its script and its boss.
 function useStage(def) {
+  CUR?.onExit?.();
   CUR = def;
   useStageWorld(def);
   loadStageScript(def);
@@ -144,12 +145,15 @@ async function boot() {
       const set = (code, on) => { if (!!held[code] !== on) { held[code] = on; key(code, on); } };
       for (let i = 0; i < n; i++) {
         let best = null, bd = 1e9;
-        for (const e of enemies) { if (!e.alive) continue; const ds = e.s - G.rail.d; if (ds < 30 || ds > 600) continue; if (ds < bd) { bd = ds; best = e; } }
+        const pool = CUR.botTargets ? [...enemies, ...CUR.botTargets()] : enemies;
+        for (const e of pool) { if (!e.alive) continue; const ds = e.s - G.rail.d; if (ds < 30 || ds > 600) continue; if (ds < bd) { bd = ds; best = e; } }
         let tu = best ? best.u : 0, tv = best ? Math.max(8, best.v) : 22;
         const B = BOSS.inst;
         if (B.active && B.phase !== 'intro') {
           const rr = worldToRail(B.botAim(), _v); tu = clamp(rr.y, -44, 44); tv = clamp(rr.z, 6, 56);
         }
+        const steer = CUR.botSteer?.();
+        if (steer) { tu = steer.u; tv = steer.v; }
         set('KeyD', tu > ship.u + 2); set('KeyA', tu < ship.u - 2);
         set('KeyW', tv > ship.v + 2); set('KeyS', tv < ship.v - 2);
         if (opts.fire !== false) set('KeyJ', i % 6 === 0);
@@ -230,7 +234,7 @@ function wireEvents() {
   on('playerDamaged', () => { G.hitStop = 0.05; });
   on('bossStart', startBoss);
   on('bossHit', () => {});
-  on('bossTurretDown', () => { G.run.hits += 1; G.run.score += 1500; });
+  on('bossPartDown', () => { G.run.hits += 1; G.run.score += 1500; });
   on('bossDefeated', () => { G.run.hits += 10; G.run.score += 20000; startClear(); });
   on('bossDying', () => { bossBar(false); setWingMode('formation'); });
 
@@ -248,10 +252,6 @@ function wireEvents() {
     if (r.shield > 0 && r.shield < r.maxShield * 0.3) once('low', () => radio('rio', 'シールド残量低下！　リングを探して回復して！', { prio: 1 }));
   });
   on('ring', (kind) => { if (kind === 'gold') once('gold', () => radio('kota', '金色のリングだ！　3つ集めるといいことあるよ！')); });
-  on('bossTurretDown', (left) => {
-    if (left === 5) radio('kota', 'ひとつ潰した！　その調子！');
-    if (left === 2) radio('rio', '砲台、残り2基よ！');
-  });
   on('bombUsed', () => once('bomb', () => radio('kota', 'ボムだー！　どっかーん！')));
   // legendary spear fragment: one bit per mission, carried through the story (all six → the true ending)
   on('fragment', () => {
@@ -378,6 +378,7 @@ function briefingFor(i) {
   G.state = 'briefing';
   openBriefing(def, {
     password: story ? encodePassword(i, CAMP.carry) : null,
+    carry: story ? CAMP.carry : null,
     onSortie: () => startMission(),
     onBack: () => {
       if (S.bg !== 'attract') { hideScreens(); enterTitle(false); return; }
@@ -412,13 +413,21 @@ function startMission() {
   fadeTo(1, 0.6, () => {
     S.transition = false;
     const def = MISSIONS[CAMP.stage].def;
-    if (CUR !== def) useStage(def);
+    if (CUR !== def) { useStage(def); warmStage(); }
     const story = CAMP.mode === 'story';
     G.run = newRun(story ? CAMP.carry.diff : G.settings.difficulty);
     if (story) applyCarry(G.run, CAMP.carry);
     G.run.startTime = G.time;
     setupStage(0, true);
   });
+}
+
+// Compile the shaders of things that first appear mid-mission (the boss, the stage's own set pieces) while the
+// screen is still black, so they don't stall the game when they show up.
+function warmStage() {
+  for (const o of [BOSS.inst.root, ...(CUR.warm?.() || [])]) {
+    try { G.renderer.compile(o, G.camera, G.scene); } catch (e) { /* best effort */ }
+  }
 }
 
 // Prepare the world for play starting at distance d
@@ -660,12 +669,13 @@ function clearCamera(dt) {
   const t = S.t;
   railFrame(G.rail.d, _p, _f, _r);
   CAM.override = CAM.override || { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 55 };
+  POST.letterbox = Math.min(1, t / 0.8);
+  if (G.state === 'clear' && CUR.clearShot?.(t, CAM.override, ship)) return;   // the stage's own cut (mission 02: the warp)
   const a = -0.6 + t * 0.35;
   const r = 26 + t * 1.2;
   CAM.override.pos.copy(ship.pos).addScaledVector(_r, Math.sin(a) * r).addScaledVector(_f, Math.cos(a) * r).setY(ship.pos.y + 4 + t * 0.6);
   CAM.override.target.copy(ship.pos);
   CAM.override.fov = 52;
-  POST.letterbox = Math.min(1, t / 0.8);
 }
 
 // ============================================================ Lens flare visibility (CPU occlusion against terrain)
@@ -682,10 +692,7 @@ function updateSunFlare(dt) {
       const x = cam.position.x + dir.x * dist, y = cam.position.y + dir.y * dist, z = cam.position.z + dir.z * dist;
       if (y < terrainHeight(x, z)) target = 0;
     }
-    if (BOSS.inst.active && BOSS.inst.head.visible) {
-      _v2.copy(BOSS.inst.headPos).project(cam);
-      if (Math.hypot(_v2.x - _v.x, _v2.y - _v.y) < 0.12 && _v2.z < 1) target = 0;
-    }
+    if (BOSS.inst.active && BOSS.inst.blocksFlare?.(_v)) target = 0;
     POST.sunPos.set(_v.x * 0.5 + 0.5, _v.y * 0.5 + 0.5);
   }
   sunVis = damp(sunVis, target, 8, dt);
@@ -861,6 +868,7 @@ function simulate(dt, rdt, gameplay) {
   if (gameplay) updatePlayerWeapons(dt, ship, ship.controllable && !S.intro && G.state === 'play');
   updateEnemies(dt);
   if (BOSS.inst.active) BOSS.inst.update(dt);
+  CUR.onUpdate?.(dt, gameplay);
   updateWingmen(dt);
   updateProps(dt);
   updateEnemyBullets(dt, ship);

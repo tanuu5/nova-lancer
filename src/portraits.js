@@ -13,6 +13,10 @@ export const CHARACTERS = {
   rio:      { name: 'RIO',      nameJa: 'リオ',     role: 'LANCER 4', color: '#5ee0c8' },
   hou:      { name: 'HQ',       nameJa: 'ホウ司令', role: 'COMMAND',  color: '#ffd166' },
   mizuchi:  { name: 'MIZUCHI',  nameJa: 'ミズチ',   role: 'UNKNOWN',  color: '#ff3355', enemy: true },
+  tsumuji:  { name: 'TSUMUJI',  nameJa: 'ツムジ',   role: 'KAMAITACHI 1', color: '#5fd18a', enemy: true },
+  kiri:     { name: 'KIRI',     nameJa: 'キリ',     role: 'KAMAITACHI 2', color: '#ff5d73', enemy: true },
+  hari:     { name: 'HARI',     nameJa: 'ハリ',     role: 'KAMAITACHI 3', color: '#ffd34d', enemy: true },
+  gashadokuro: { name: 'GASHADOKURO', nameJa: 'ガシャドクロ', role: 'UNKNOWN', color: '#e070ff', enemy: true },
 };
 
 const STYLE = '<style>.pm-open,.pe-closed{display:none}svg.open .pm-open,svg.blink .pe-closed{display:inline}svg.open .pm-closed,svg.blink .pe-open{display:none}</style>';
@@ -240,6 +244,139 @@ ${both(glow('M35 57 L41 64 L41 78 L45 86', .7) + node(41, 78, 1))}`;
 <g class="pm-closed">${jawC}</g><g class="pm-open">${jawO}</g>${glitch}`);
 }
 
+// ---------------------------------------------------------------- KAMAITACHI (weasel siblings)
+// Shared weasel head: long rounded skull, small wide-set ears, dark mask across the eyes, white lips and chin.
+function weasel(id, P) {
+  const O = P.ink;
+  const headD = 'M64 25 C85 25 100 37 102 54 C104 67 99 79 90 87 C83 93 74 96 64 96 C54 96 45 93 38 87 C29 79 24 67 26 54 C28 37 43 25 64 25 Z';
+  const defs = `
+<clipPath id="${id}-clip"><path d="${headD}"/></clipPath>
+<radialGradient id="${id}-fur" cx=".45" cy=".3" r=".85"><stop offset="0" stop-color="${P.fur[0]}"/><stop offset=".6" stop-color="${P.fur[1]}"/><stop offset="1" stop-color="${P.fur[2]}"/></radialGradient>
+<linearGradient id="${id}-white" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff8ec"/><stop offset="1" stop-color="#e8d9c2"/></linearGradient>
+<radialGradient id="${id}-eye" cx=".5" cy=".7" r=".8"><stop offset="0" stop-color="${P.iris[0]}"/><stop offset=".55" stop-color="${P.iris[1]}"/><stop offset="1" stop-color="#120806"/></radialGradient>
+<linearGradient id="${id}-suit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.suit[0]}"/><stop offset="1" stop-color="${P.suit[1]}"/></linearGradient>${P.defs || ''}`;
+  const earL = `<path d="M29 46 C24 43 22.5 36.5 25.5 33 C28.5 29.5 35 30.5 39 36 Z" fill="${P.fur[2]}" stroke="${O}" stroke-width="1.5" stroke-linejoin="round"/><path d="M30 43 C27 41 26 37 28 35 C30 33 33.5 33.6 36 36.6 Z" fill="${P.earIn}"/>`;
+  const mask = `<path d="M38 52 C44 45 54 44 60 50 C62 53 63 58 64 62 C65 58 66 53 68 50 C74 44 84 45 90 52 C93 57 91 63 86 65 C80 67 72 64 66 66 C65 67 63 67 62 66 C56 64 48 67 42 65 C37 63 35 57 38 52 Z" fill="${P.mask}" clip-path="url(#${id}-clip)"/>`;
+  const muzzle = `<path d="M64 64 C73 64 81 70 82 78 C83 87 75 94 64 94 C53 94 45 87 46 78 C47 70 55 64 64 64 Z" fill="url(#${id}-white)"/><path d="M50 72 C54 69 58 69 61 71 M78 72 C74 69 70 69 67 71" stroke="#d9c7ab" stroke-width="1" fill="none" stroke-linecap="round"/>`;
+  const nose = `<path d="M58.5 67 C58.5 63.5 69.5 63.5 69.5 67 C69.5 70 66.5 72.5 64 72.5 C61.5 72.5 58.5 70 58.5 67 Z" fill="#1e1210"/><ellipse cx="62" cy="65.6" rx="1.8" ry=".9" fill="#7a625c"/>`;
+  const whiskers = `<g stroke="#fff4e4" stroke-width=".8" fill="none" stroke-linecap="round" opacity=".8"><path d="M50 75 Q39 72 29 73"/><path d="M50 78 Q40 79 30 83"/><path d="M78 75 Q89 72 99 73"/><path d="M78 78 Q88 79 98 83"/></g>`;
+  return { O, headD, defs, earL, mask, muzzle, nose, whiskers,
+    rim: `<path d="${headD}" fill="none" stroke="${O}" stroke-width="1.6" stroke-linejoin="round"/>`,
+    head: `<path d="${headD}" fill="url(#${id}-fur)"/>` };
+}
+
+function tsumuji() {
+  const P = { ink: '#2a160c', fur: ['#e8a456', '#cf7d34', '#9c5220'], earIn: '#f6dcc0', mask: '#5e3418', iris: ['#ffd36a', '#c47a14'], suit: ['#3fa864', '#226a3c'],
+    defs: '<radialGradient id="tsumuji-lens" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#d8ffe4"/><stop offset=".5" stop-color="#4fd68a"/><stop offset="1" stop-color="#14532e"/></radialGradient>' };
+  const W = weasel('tsumuji', P), O = W.O;
+  const notch = `<path d="M100 26 L96.5 29.5 L99.5 31" fill="#1d2a24" stroke="${O}" stroke-width="1" stroke-linejoin="round"/>`;
+  // smug, half-lidded eyes; the right brow cocked
+  const eye = (cx, flip) => `<ellipse cx="${cx}" cy="56" rx="6.4" ry="6.6" fill="url(#tsumuji-eye)" stroke="${O}" stroke-width="1.2"/><circle cx="${cx + (flip ? -0.6 : 0.6)}" cy="57" r="2.8" fill="#140806"/>
+<path d="M${cx - 7.4} ${flip ? 54.2 : 53.4} Q${cx} ${flip ? 49.6 : 50.6} ${cx + 7.4} ${flip ? 53.4 : 54.2} L${cx + 7.2} ${flip ? 55.4 : 56.4} Q${cx} ${flip ? 52.4 : 53.4} ${cx - 7.2} ${flip ? 56.4 : 55.4} Z" fill="${P.fur[1]}" stroke="${O}" stroke-width="1.4" stroke-linejoin="round"/>`;
+  const eyes = eye(47, false) + eye(81, true) + `<circle cx="45.2" cy="58.4" r="1.3" fill="#fff"/><circle cx="79.2" cy="58.4" r="1.3" fill="#fff"/>`;
+  const shut = `<path d="M40.5 56 Q47 59.5 53.5 56 M74.5 56 Q81 59.5 87.5 56" fill="none" stroke="${O}" stroke-width="2" stroke-linecap="round"/>`;
+  const brows = `<path d="M39 46 Q46 43 54 46" stroke="#3a1e0e" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M74 44 Q82 39 90 43" stroke="#3a1e0e" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+  const mouthC = `<path d="M64 72.5 V76 M55 77.5 Q60 80 64 76.5 Q69 80.5 75 75.5" fill="none" stroke="${O}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M70.5 78.4 L71.8 81.6 L73.2 78" fill="#fffaf0" stroke="${O}" stroke-width=".8" stroke-linejoin="round"/>`;
+  const mouthO = `<path d="M64 72.5 V75" stroke="${O}" stroke-width="1.6"/><path d="M54.5 76.5 Q64 74.5 75.5 75 Q73 87.5 64 87.5 Q56 87.5 54.5 76.5 Z" fill="#4a1410" stroke="${O}" stroke-width="1.4" stroke-linejoin="round"/><path d="M58 84 Q64 80.5 70 84 Q67.5 87.5 64 87.5 Q60.5 87.5 58 84 Z" fill="#ff7a7a"/><path d="M69.5 75.6 L71 80 L72.6 75.4" fill="#fffaf0" stroke="${O}" stroke-width=".8" stroke-linejoin="round"/>`;
+  const goggles = `<path d="M28 41 C33 31 46 27 64 27 C82 27 95 31 100 41 L99 45 C93 37 81 33.5 64 33.5 C47 33.5 35 37 29 45 Z" fill="#2c2620" stroke="${O}" stroke-width="1.1"/>
+${both(`<ellipse cx="51" cy="31.5" rx="9" ry="6.6" fill="#3a3a34" stroke="${O}" stroke-width="1.3"/><ellipse cx="51" cy="31.5" rx="7" ry="4.9" fill="url(#tsumuji-lens)"/>`)}
+<path d="M46 29.5 Q49 27.4 53 28" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".85"/><rect x="59.5" y="29" width="9" height="4" rx="1.6" fill="#5c574e" stroke="${O}" stroke-width=".8"/>`;
+  const body = `
+<path d="M4 128 C6 111 19 101 40 98 L88 98 C109 101 122 111 124 128 Z" fill="url(#tsumuji-suit)" stroke="#123a20" stroke-width="1.6"/>
+<path d="M36 96 C44 104 84 104 92 96 C95 101 94 106 90 108 C80 111 48 111 38 108 C34 106 33 101 36 96 Z" fill="#d8c8a2" stroke="#6a5a3a" stroke-width="1.2"/>
+<g stroke="#b8a47a" stroke-width="1" fill="none" stroke-linecap="round"><path d="M44 103 q2 2 4 0 M54 105 q2 2 4 0 M66 105 q2 2 4 0 M78 103 q2 2 4 0"/></g>
+<path d="M60 108 L64 128 L68 108 Z" fill="#1d2a24"/><rect x="86" y="112" width="15" height="9" rx="2" fill="#1d2a24" stroke="#0c1410" stroke-width="1"/><path d="M89 119 L93.5 113.5 L98 119" stroke="#8affb4" stroke-width="1.4" fill="none"/>`;
+  const mic = `<path d="M101 58 C102 69 97 77 85 80" fill="none" stroke="#121a16" stroke-width="2.8"/><path d="M101 58 C102 69 97 77 85 80" fill="none" stroke="#3a4a40" stroke-width="1.1"/><rect x="80" y="77.5" width="6.5" height="5" rx="2.2" fill="#1d2a24" stroke="#0c1410" stroke-width="1"/>
+<rect x="97.5" y="49" width="8.5" height="14" rx="3.4" fill="#1d2a24" stroke="#0c1410" stroke-width="1.1"/><circle cx="101.8" cy="53" r="1.5" fill="#8affb4"/>`;
+  return wrap('tsumuji', W.defs, body + `<g transform="rotate(4 64 64)">${both(W.earL)}${notch}${W.head}${W.mask}${W.muzzle}${W.whiskers}${W.nose}${brows}
+<g class="pe-open">${eyes}</g><g class="pe-closed">${shut}</g>
+<g class="pm-closed">${mouthC}</g><g class="pm-open">${mouthO}</g>${W.rim}${goggles}${mic}</g>`);
+}
+
+function kiri() {
+  const P = { ink: '#1c0e0a', fur: ['#a8653a', '#83492a', '#56301a'], earIn: '#e8c8b0', mask: '#3a1e12', iris: ['#ff8a9a', '#c4203c'], suit: ['#2e2832', '#141018'] };
+  const W = weasel('kiri', P), O = W.O;
+  // one sharp, cold eye; the other hidden under a long sweep of fur
+  const eye = `<path d="M74 57 Q81 51.5 89 55.6 Q83.5 60.6 74 57 Z" fill="url(#kiri-eye)"/><ellipse cx="81.6" cy="56.4" rx="1.5" ry="2.6" fill="#120404"/><path d="M73.4 57.2 Q81 50.8 89.6 55.4" fill="none" stroke="${O}" stroke-width="2" stroke-linecap="round"/><circle cx="80.4" cy="55.2" r=".9" fill="#fff"/>`;
+  const shut = `<path d="M74 56.6 Q81 58.6 89 55.6" fill="none" stroke="${O}" stroke-width="2" stroke-linecap="round"/>`;
+  const brow = `<path d="M73 49 L90 47" stroke="#2a140a" stroke-width="2" stroke-linecap="round"/>`;
+  const bang = `<path d="M44 28 C56 24 70 25 76 32 C70 33 66 36 64 41 C62 50 58 60 50 67 C44 72 36 70 32 64 C38 62 42 56 42 48 C42 40 40 34 44 28 Z" fill="#4a2614" stroke="${O}" stroke-width="1.4" stroke-linejoin="round"/>
+<path d="M60 31 C56 40 52 52 44 62 M68 31 C63 38 60 47 56 56" stroke="#7a4426" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
+  const mouthC = `<path d="M64 72.5 V76.5 M59 78.6 Q64 77.4 69 78.6" fill="none" stroke="${O}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const mouthO = `<path d="M64 72.5 V75.5" stroke="${O}" stroke-width="1.5"/><path d="M59.5 77.5 Q64 76.4 68.5 77.5 Q67.6 83.2 64 83.2 Q60.4 83.2 59.5 77.5 Z" fill="#3e0e10" stroke="${O}" stroke-width="1.2" stroke-linejoin="round"/>`;
+  const cuff = `<path d="M100 32 Q104 36 101 41" fill="none" stroke="#dfe3ea" stroke-width="1.8" stroke-linecap="round"/><circle cx="101.4" cy="41.5" r="1.3" fill="#ff6a8a"/>`;
+  const headset = `<path d="M27 50 C25 36 40 25.5 64 25.5 C88 25.5 103 36 101 50" fill="none" stroke="#121016" stroke-width="3"/><path d="M27 50 C25 36 40 25.5 64 25.5 C88 25.5 103 36 101 50" fill="none" stroke="#d33550" stroke-width=".9"/>
+<rect x="22" y="45" width="8" height="13" rx="3" fill="#221c26" stroke="#0a080c" stroke-width="1.1"/><rect x="98" y="45" width="8" height="13" rx="3" fill="#221c26" stroke="#0a080c" stroke-width="1.1"/><rect x="100.2" y="48" width="2" height="7" rx="1" fill="#ff6a8a"/>`;
+  const body = `
+<path d="M6 128 C8 111 21 101 41 98 L87 98 C107 101 120 111 122 128 Z" fill="url(#kiri-suit)" stroke="#060408" stroke-width="1.6"/>
+<path d="M42 88 C50 96 78 96 86 88 L90 104 C80 110 48 110 38 104 Z" fill="#2a2430" stroke="#060408" stroke-width="1.4" stroke-linejoin="round"/>
+<path d="M44 92 C52 99 76 99 84 92" stroke="#d33550" stroke-width="1.4" fill="none"/>
+<path d="M30 128 L44 106 M98 128 L84 106" stroke="#d33550" stroke-width="1.6"/><path d="M58 106 L64 120 L70 106" fill="none" stroke="#e9ecf2" stroke-width="1.3"/>
+<path d="M88 114 L100 110 L98 116 Z" fill="#e9ecf2" stroke="#8a8f99" stroke-width=".8"/>`;
+  return wrap('kiri', W.defs, body + `${both(W.earL)}${W.head}${W.mask}${W.muzzle}${W.whiskers}${W.nose}${brow}
+<g class="pe-open">${eye}</g><g class="pe-closed">${shut}</g>
+<g class="pm-closed">${mouthC}</g><g class="pm-open">${mouthO}</g>${W.rim}${bang}${headset}${cuff}`);
+}
+
+function hari() {
+  const P = { ink: '#2e1a0e', fur: ['#f0c48e', '#d89a5e', '#a86a36'], earIn: '#fbe6cc', mask: '#8a5428', iris: ['#9ad8ff', '#2a6ab0'], suit: ['#f0c23a', '#c8901a'],
+    defs: '<radialGradient id="hari-lens" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#fff2c8"/><stop offset=".55" stop-color="#f2a83a"/><stop offset="1" stop-color="#7a4210"/></radialGradient>' };
+  const W = weasel('hari', P), O = W.O;
+  // big round worried eyes
+  const eye = (cx) => `<ellipse cx="${cx}" cy="57" rx="7.4" ry="8.4" fill="url(#hari-eye)" stroke="${O}" stroke-width="1.3"/><circle cx="${cx}" cy="58.4" r="3.6" fill="#0c1424"/><circle cx="${cx - 2.6}" cy="54.6" r="2.6" fill="#fff"/><circle cx="${cx + 2.4}" cy="61" r="1.2" fill="#fff"/>`;
+  const eyes = eye(46.5) + eye(81.5) + `<path d="M40.5 65 Q42 67 41 69" stroke="#9ad8ff" stroke-width="1.3" fill="none" stroke-linecap="round" opacity=".8"/>`;
+  const shut = `<path d="M39.5 58 Q46.5 61.5 53.5 58 M74.5 58 Q81.5 61.5 88.5 58" fill="none" stroke="${O}" stroke-width="2" stroke-linecap="round"/>`;
+  const brows = `<path d="M40 47.5 Q46 47 52.5 43.5 M75.5 43.5 Q82 47 88 47.5" stroke="#5a3418" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+  const mouthC = `<path d="M64 72.5 V75.5 M58.5 78 Q61 76.4 63 78 Q65 79.6 67 78 Q69 76.4 70.5 78" fill="none" stroke="${O}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const mouthO = `<path d="M64 72.5 V75" stroke="${O}" stroke-width="1.5"/><ellipse cx="64" cy="80" rx="4.6" ry="4.4" fill="#4a1612" stroke="${O}" stroke-width="1.3"/><ellipse cx="64" cy="82" rx="2.6" ry="1.6" fill="#ff8a8a"/>`;
+  const plaster = `<g transform="rotate(-24 88 75)"><rect x="82" y="72" width="12" height="5.6" rx="2.6" fill="#f6e2c4" stroke="#b8946a" stroke-width=".8"/><rect x="86.4" y="72" width="3.4" height="5.6" fill="#e8caa0"/></g>`;
+  const goggles = `<path d="M26 40 C31 30 45 25.5 64 25.5 C83 25.5 97 30 102 40 L101 44.5 C95 36 82 32 64 32 C46 32 33 36 27 44.5 Z" fill="#5a4630" stroke="${O}" stroke-width="1.1"/>
+${both(`<circle cx="50" cy="30" r="9.4" fill="#3c3830" stroke="${O}" stroke-width="1.4"/><circle cx="50" cy="30" r="7.4" fill="url(#hari-lens)"/><circle cx="50" cy="30" r="7.4" fill="none" stroke="#8a8578" stroke-width="1"/>`)}
+<path d="M45 27.5 Q48 24.8 51.5 25.2" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".9"/><rect x="58.6" y="27.6" width="10.8" height="4.6" rx="1.8" fill="#6a6458" stroke="${O}" stroke-width=".8"/>`;
+  const body = `
+<path d="M8 128 C10 112 22 102 41 99 L87 99 C106 102 118 112 120 128 Z" fill="url(#hari-suit)" stroke="#6a4a0e" stroke-width="1.6"/>
+<path d="M50 99 L58 128 M78 99 L70 128" stroke="#8a6a1e" stroke-width="2.4"/><rect x="56" y="108" width="16" height="11" rx="2" fill="#e0aa26" stroke="#8a6a1e" stroke-width="1"/>
+<path d="M60.5 116.5 L67 110.5 M65.2 109.6 a2.2 2.2 0 1 1 2.9 2.9" stroke="#5a4630" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M40 92 C48 99 80 99 88 92 L90 102 C80 107 48 107 38 102 Z" fill="#6a5a44" stroke="#3a2a14" stroke-width="1.3" stroke-linejoin="round"/>
+<circle cx="96" cy="114" r="4.2" fill="#3a3a40" stroke="#1a1a20" stroke-width="1"/><circle cx="96" cy="114" r="1.6" fill="#7ffff0"/>`;
+  return wrap('hari', W.defs, body + `<g transform="translate(64 66) scale(.94) translate(-64 -64)"><g transform="rotate(-8 30 40)">${W.earL}</g><g transform="${MIRROR}"><g transform="rotate(-8 30 40)">${W.earL}</g></g>
+${W.head}${W.mask}${W.muzzle}${W.whiskers}${W.nose}${brows}${plaster}
+<g class="pe-open">${eyes}</g><g class="pe-closed">${shut}</g>
+<g class="pm-closed">${mouthC}</g><g class="pm-open">${mouthO}</g>${W.rim}${goggles}</g>`);
+}
+
+// ---------------------------------------------------------------- GASHADOKURO (skeleton of welded wreck plates)
+function gashadokuro() {
+  const R = '#ff3df0', K = '#0b090f';
+  const defs = `
+<radialGradient id="gashadokuro-aura" cx=".5" cy=".45" r=".6"><stop offset="0" stop-color="#b45cff" stop-opacity=".38"/><stop offset=".6" stop-color="#4a1a6a" stop-opacity=".14"/><stop offset="1" stop-color="#b45cff" stop-opacity="0"/></radialGradient>
+<linearGradient id="gashadokuro-bone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4ccb6"/><stop offset=".55" stop-color="#a39b86"/><stop offset="1" stop-color="#5e584c"/></linearGradient>
+<linearGradient id="gashadokuro-dark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a5448"/><stop offset="1" stop-color="#1e1b18"/></linearGradient>
+<radialGradient id="gashadokuro-eye" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff2fd"/><stop offset=".3" stop-color="#ff9cf4"/><stop offset=".7" stop-color="${R}"/><stop offset="1" stop-color="#5a0050"/></radialGradient>
+<radialGradient id="gashadokuro-glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="${R}" stop-opacity=".85"/><stop offset=".5" stop-color="${R}" stop-opacity=".25"/><stop offset="1" stop-color="${R}" stop-opacity="0"/></radialGradient>`;
+  const seam = (d) => `<path d="${d}" stroke="#b45cff" stroke-width="2.6" fill="none" opacity=".3" stroke-linecap="round"/><path d="${d}" stroke="#e2b0ff" stroke-width=".8" fill="none" stroke-linecap="round"/>`;
+  const rivets = (pts) => pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="#4a453c"/><circle cx="${x - 0.3}" cy="${y - 0.3}" r=".4" fill="#e6dfcc"/>`).join('');
+  const debris = `<g fill="url(#gashadokuro-dark)" stroke="${K}" stroke-width=".8"><path d="M10 22 L18 18 L20 25 L12 28 Z"/><path d="M108 16 L118 20 L113 27 Z"/><path d="M6 88 L14 84 L16 92 Z"/><path d="M112 96 L122 92 L120 102 L114 101 Z"/></g>`;
+  const cranium = `<path d="M64 10 C88 10 104 26 104 48 C104 60 99 68 94 74 L90 86 L38 86 L34 74 C29 68 24 60 24 48 C24 26 40 10 64 10 Z" fill="url(#gashadokuro-bone)" stroke="${K}" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M30 40 C40 34 52 33 60 36 L58 22 C48 22 38 28 30 40 Z M98 40 C88 34 76 33 68 36 L70 22 C80 22 90 28 98 40 Z" fill="#bdb49e" opacity=".55"/>
+<path d="M64 10 L62 22 L66 30 L63 38" stroke="${K}" stroke-width="1.2" fill="none"/><path d="M40 18 L46 28 M88 18 L82 26 M28 52 L36 54 M100 52 L92 55" stroke="#4e483e" stroke-width="1.1" fill="none"/>
+${seam('M34 30 Q48 24 60 26')}${seam('M70 44 L84 40 L96 46')}
+${rivets([[36, 34], [44, 29], [53, 27], [75, 27], [84, 29], [92, 34], [30, 58], [98, 58]])}
+<path d="M80 14 L86 20 L82 24 L76 18 Z" fill="#7f573e" stroke="${K}" stroke-width=".8"/>`;
+  const sockets = `<path d="M34 50 C38 42 50 41 56 47 C59 52 58 60 52 64 C45 68 36 64 34 57 Z" fill="${K}" stroke="#2a2620" stroke-width="1.4"/><path d="M94 50 C90 42 78 41 72 47 C69 52 70 60 76 64 C83 68 92 64 94 57 Z" fill="${K}" stroke="#2a2620" stroke-width="1.4"/>`;
+  const eyeOpen = `<circle cx="46" cy="54" r="15" fill="url(#gashadokuro-glow)" opacity=".7"/><circle cx="82" cy="54" r="12" fill="url(#gashadokuro-glow)" opacity=".6"/><circle cx="46" cy="54" r="5.6" fill="url(#gashadokuro-eye)"/><circle cx="82" cy="54.6" r="3.8" fill="url(#gashadokuro-eye)"/><circle cx="44.4" cy="52.4" r="1.2" fill="#fff"/>`;
+  const eyeShut = `<circle cx="46" cy="54" r="2.2" fill="#6a1460"/><circle cx="82" cy="54.6" r="1.6" fill="#6a1460"/>`;
+  const nose = `<path d="M64 62 L58 74 L64 76 L70 74 Z" fill="${K}" stroke="#2a2620" stroke-width="1.2" stroke-linejoin="round"/><path d="M64 64 V75" stroke="#3a1440" stroke-width="1"/>`;
+  const upperTeeth = Array.from({ length: 8 }, (_, i) => `<rect x="${41.5 + i * 5.7}" y="80" width="4.6" height="8" rx=".6" fill="#ddd6c4" stroke="${K}" stroke-width=".9"/>`).join('');
+  const jawC = `<path d="M38 88 L90 88 L86 104 C80 110 48 110 42 104 Z" fill="url(#gashadokuro-dark)" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/>${Array.from({ length: 8 }, (_, i) => `<rect x="${41.5 + i * 5.7}" y="87" width="4.6" height="6" rx=".6" fill="#cfc8b4" stroke="${K}" stroke-width=".9"/>`).join('')}${seam('M46 100 L82 100')}`;
+  const jawO = `<ellipse cx="64" cy="96" rx="24" ry="12" fill="url(#gashadokuro-glow)"/><path d="M42 89 L86 89 L84 92 L44 92 Z" fill="#ffb8f6" opacity=".8"/><path d="M38 96 L90 96 L86 112 C80 118 48 118 42 112 Z" fill="url(#gashadokuro-dark)" stroke="${K}" stroke-width="1.4" stroke-linejoin="round"/>${Array.from({ length: 8 }, (_, i) => `<rect x="${41.5 + i * 5.7}" y="95" width="4.6" height="6" rx=".6" fill="#cfc8b4" stroke="${K}" stroke-width=".9"/>`).join('')}${seam('M46 108 L82 108')}`;
+  const glitch = `<rect x="70" y="20" width="58" height="2" fill="${R}" opacity=".45"/><rect x="0" y="66" width="34" height="1.2" fill="#46e0ff" opacity=".45"/><rect x="88" y="78" width="40" height="1.4" fill="#fff" opacity=".3"/><rect x="0" y="116" width="50" height="1.2" fill="${R}" opacity=".35"/>`;
+  return wrap('gashadokuro', defs, `<rect width="128" height="128" fill="url(#gashadokuro-aura)"/>${debris}
+<path d="M46 106 L42 128 M82 106 L86 128 M58 108 L56 128 M70 108 L72 128" stroke="url(#gashadokuro-dark)" stroke-width="5"/>
+${cranium}${sockets}<g class="pe-open">${eyeOpen}</g><g class="pe-closed">${eyeShut}</g>${nose}${upperTeeth}
+<g class="pm-closed">${jawC}</g><g class="pm-open">${jawO}</g>${glitch}`);
+}
+
 // ---------------------------------------------------------------- fallback (unknown caller)
 function noSignal() {
   const bars = [[14, 3], [37, 1.4], [61, 2.2], [88, 1.2], [109, 2.6]].map(([y, h], i) => `<rect x="${i % 2 ? 0 : 20}" y="${y}" width="${i % 2 ? 108 : 88}" height="${h}" fill="#9fb4d8" opacity=".22"/>`).join('');
@@ -248,7 +385,7 @@ function noSignal() {
 <g class="pm-closed"><path d="M58 74 H70" stroke="#7fb2ff" stroke-width="2" stroke-linecap="round"/></g><g class="pm-open"><rect x="58" y="71" width="12" height="6" rx="3" fill="#7fb2ff"/></g>${bars}`);
 }
 
-const BUILDERS = { kota, gantetsu, rio, hou, mizuchi };
+const BUILDERS = { kota, gantetsu, rio, hou, mizuchi, tsumuji, kiri, hari, gashadokuro };
 const ALIASES = { hq: 'hou' };
 const cache = {};
 

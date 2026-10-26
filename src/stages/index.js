@@ -1,22 +1,31 @@
-// Stage definitions in story order. A definition holds everything one mission needs; azure.js is the reference.
+// Stage definitions in story order. A definition holds everything one mission needs; azure.js is the reference
+// for a planet, violet.js for space.
 //   id, no, title, place, sub, resultSub      names for banners and panels
 //   music, bossAt, checkpoints, wingRearAt     course pacing (bossAt: restarts past it skip the stage music)
 //   attract                                    rail range for the title fly-through (first stage only)
 //   world: { zoneW, pathX, terrainHeight, faceColor, decorate, palettes, paletteKeys, water, clouds }
+//          or { space: true | { band }, zoneW, pathX, decorate, palettes, paletteKeys } (no terrain, sea or gravity;
+//          nebula sky — see world.useStageWorld)
 //   script(at)                                 registers events with at(distance, fn) and schedules props
 //   onSetup(d, run), onClear(run), absent(run) hooks around (re)starts and the clear sequence
-//   boss: { id, en, title, bar, introLines: [{ who, text, hold }], bannerAt } + onBossPhase / onBossCharge / onBossDying
-//   clearTime, onFragment()                    length of the clear orbit (default 8.5 s); reaction to the spear fragment
+//   onUpdate(dt, gameplay), onExit()           every simulated frame (the stage's own actors); when another stage is loaded
+//   warm()                                     objects whose shaders to compile while the screen is black before the mission
+//   boss: { id, en, title, bar, introLines: [{ who, text, hold }], bannerAt }
+//          + onBossPhase(p) / onBossCharge() / onBossDying() / onBossPartDown(partsLeft)
+//   clearTime, clearShot(t, cam, ship)         length of the clear orbit (default 8.5 s); a camera of its own (return true)
+//   onFragment()                               reaction to the spear fragment
 //   rank: { S, A, B, medal }, resultNote(run)  results screen
 //   map: { target }                            star-map body highlighted in the briefing (see screens.js)
-//   briefing: { lines: [{ who, text }], objective }, talk: [{ who, text }] (story mode, after the results)
+//   briefing: { lines: [{ who, text }] | (carry) => lines, objective }, talk: [{ who, text }] (story mode, after the results)
 //   squadAfter(run, squad)                     wingmen still under repair when the next stage starts (bit 0 = Kota)
+//   botTargets(), botSteer()                   dev-build test bot: extra things to shoot; a (u, v) to steer for
 import azure from './azure.js';
+import violet from './violet.js';
 
 // The seven missions of the story, in order. `def` is the stage definition once the mission has been built.
 export const MISSIONS = [
   { no: 1, id: 'azure', title: 'AZURE COAST', place: '惑星アクエリア', def: azure },
-  { no: 2, id: 'violet', title: 'VIOLET SARGASSO', place: 'サルガッソ宙域' },
+  { no: 2, id: 'violet', title: 'VIOLET SARGASSO', place: 'サルガッソ宙域', def: violet },
   { no: 3, id: 'amber', title: 'AMBER DUNES', place: '惑星アリディア' },
   { no: 4, id: 'white', title: 'WHITE SILENCE', place: '惑星グラシア' },
   { no: 5, id: 'emerald', title: 'EMERALD STORM', place: '惑星シルヴァ' },

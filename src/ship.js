@@ -429,7 +429,7 @@ export class PlayerShip {
       }
     }
     // water skim spray
-    if (gh < 0 && this.pos.y < 7 && this.dying <= 0) {
+    if (G.sea && gh < 0 && this.pos.y < 7 && this.dying <= 0) {
       if (Math.random() < 0.9) {
         const k = 1 - this.pos.y / 7;
         const bx = this.pos.x + rand(-2, 2), bz = this.pos.z + rand(0, 4);
@@ -552,7 +552,7 @@ export class PlayerShip {
     if (this.boostAmt > 0.2) speedLines(this.boostAmt, this.railFwd);
     // blob shadow on the water
     const gh = groundHeight(this.pos.x, this.pos.z);
-    if (gh < 0) {
+    if (G.sea && gh < 0) {
       this.blob.visible = true;
       const k = clamp(1 - this.pos.y / 60, 0, 1);
       this.blob.position.set(this.pos.x, 0.05, this.pos.z);

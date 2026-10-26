@@ -105,9 +105,11 @@ function orientToRail(obj, s) {
   obj.rotation.set(0, Math.atan2(-_f.x, -_f.z), 0);
 }
 
-class Prop {
+// Base class for props; stage-specific props register their own types (registerProp). A long prop reaches forward
+// from s (local -Z) for `len` metres (o.len) and stays until the player has flown its whole length.
+export class Prop {
   constructor(type, s, o) {
-    this.type = type; this.s = s; this.u = o.u ?? 0; this.v = o.v ?? 0; this.o = o;
+    this.type = type; this.s = s; this.u = o.u ?? 0; this.v = o.v ?? 0; this.o = o; this.len = o.len ?? 0;
     this.t = 0; this.alive = true;
     this.root = new THREE.Group();
     railToWorld(s, 0, 0, this.root.position);   // root on the rail centre line; children offset by u in local X
@@ -434,7 +436,7 @@ class Gate extends Prop {
 
 // ---------------------------------------------------------------- Obstacle hit response
 let obstacleCool = 0;
-function hitObstacle(pushU, pushV) {
+export function hitObstacle(pushU, pushV) {
   const P = G.player;
   if (obstacleCool > 0) return;
   obstacleCool = 0.5;
@@ -450,6 +452,7 @@ function hitObstacle(pushU, pushV) {
 const TYPES = { ring: Ring, item: Item, fragment: Fragment, arch: Arch, stack: Stack, pillar: Pillar, bridge: Bridge, tower: Tower, gate: Gate };
 
 export function initProps() { buildGeos(); initMaterials(); }
+export function registerProp(type, cls) { TYPES[type] = cls; }
 
 export function scheduleProp(type, s, o = {}) { schedule.push({ type, s, o, spawned: false }); }
 export function clearSchedule() { schedule.length = 0; }
@@ -464,13 +467,13 @@ export function updateProps(dt) {
   obstacleCool = Math.max(0, obstacleCool - dt);
   const d = G.rail.d;
   for (const it of schedule) {
-    if (!it.spawned && d > it.s - 2700 && d < it.s + 40) { it.spawned = true; spawnProp(it.type, it.s, it.o); }
+    if (!it.spawned && d > it.s - 2700 && d < it.s + (it.o.len ?? 0) + 40) { it.spawned = true; spawnProp(it.type, it.s, it.o); }
   }
   for (let i = props.length - 1; i >= 0; i--) {
     const p = props[i];
     if (!p.alive) { props.splice(i, 1); continue; }
     p.update(dt);
-    if (p.s < d - 120) { p.dispose(); props.splice(i, 1); }
+    if (p.s + p.len < d - 120) { p.dispose(); props.splice(i, 1); }
   }
 }
 

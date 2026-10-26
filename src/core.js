@@ -111,6 +111,8 @@ export const G = {
   run: null,            // per-attempt stats, see newRun()
   player: null,
   shake: 0,
+  sea: true,            // a sea surface at y = 0 (splashes, spray, the ship's shadow); set by the stage world
+  space: false,         // no ground and no gravity (space stages)
   cinematic: null,      // active camera cinematic
   settings: null,
   lowPerf: false,

@@ -87,7 +87,7 @@ function updateLasers(dt) {
     if (!dead) {
       const gh = groundHeight(L.p.x, L.p.z);
       if (L.p.y < gh) { dead = true; sparks(L.p.setY(gh + 0.3), new THREE.Vector3(0, 1, 0), 6, [5, 4, 2], 20, 1); }
-      else if (L.p.y < 0) { dead = true; splash(L.p.setY(0), 0.18); }
+      else if (L.p.y < 0 && G.sea) { dead = true; splash(L.p.setY(0), 0.18); }
     }
     if (dead) { lasers.splice(i, 1); continue; }
     const c = LASER_COL[L.level];
@@ -441,7 +441,7 @@ export function updateEnemyBullets(dt, ship) {
       }
     }
     // terrain
-    if (b.p.y < 0.2 || b.p.y < groundHeight(b.p.x, b.p.z)) {
+    if ((G.sea && b.p.y < 0.2) || b.p.y < groundHeight(b.p.x, b.p.z)) {
       if (b.p.y < 1) splash(b.p, 0.2); else sparks(b.p, null, 4, [4, 2, 1], 15, 1);
       removeBullet(i); continue;
     }

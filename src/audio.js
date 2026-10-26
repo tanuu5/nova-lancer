@@ -1118,6 +1118,10 @@ const VOICE_DEF = {
   rio:      { f0: 360, spread: 0.07, form: 1.12, len: 0.07, wave: 'sawtooth', bounce: 0.04, soft: 2400, gain: 0.9 },
   hou:      { f0: 250, spread: 0.09, form: 0.98, len: 0.085, wave: 'sawtooth', bounce: 0.02, vib: [6.2, 0.05], gain: 0.9 },
   mizuchi:  { f0: 110, spread: 0.05, form: 0.9, len: 0.075, wave: 'square', bounce: 0, ring: 377, gain: 0.8 },
+  tsumuji:  { f0: 290, spread: 0.13, form: 1.04, len: 0.058, wave: 'sawtooth', bounce: 0.2, gain: 0.9 },
+  kiri:     { f0: 320, spread: 0.025, form: 1.08, len: 0.078, wave: 'sawtooth', bounce: -0.05, soft: 1900, gain: 0.85 },
+  hari:     { f0: 540, spread: 0.09, form: 1.3, len: 0.05, wave: 'sawtooth', bounce: 0.07, soft: 2600, vib: [7.5, 0.035], gain: 0.7 },
+  gashadokuro: { f0: 82, spread: 0.04, form: 0.78, len: 0.09, wave: 'square', bounce: -0.02, ring: 211, fry: 31, noise: 0.25, gain: 0.85 },
 };
 const FORMANTS = {
   a: [800, 1250, 2600], i: [300, 2250, 3000], u: [340, 1300, 2400],
@@ -1770,6 +1774,12 @@ const DRUM = {
   bBeatC: { c: 'X...............', k: 'X..X..X.X..X..X.', s: '....X.......X...', h: '..xoxoxoxoxoxoxo' },
   bFill:  { k: 'X..X..X.X.......', s: '....X...........', t: '........11223344', h: 'xoxoxoxo........' },
   bFill2: { k: 'X..X..X.X.......', s: '....X...XxXxXXXX', h: 'xoxoxoxo........' },
+  // stage 2 (spacey drive)
+  sPulse:  { k: 'x.......x.......', h: '..x...x...x...x.' },
+  sDrive:  { k: 'X.....x...X.x...', s: '....X.......X...', h: 'x.x.x.x.x.x.x.x.', o: '......x.......x.' },
+  sDriveC: { c: 'X...............', k: 'X.....x...X.x...', s: '....X.......X...', h: '..x.x.x.x.x.x.x.', o: '......x.......x.' },
+  sDrive2: { k: 'X.....x...X.x..x', s: '....X.......X.xo', h: 'x.x.x.x.x.x.x.x.' },
+  sFill:   { k: 'X.....x.X.......', s: '....X...xxX.XxXX', h: 'x.x.x.x.........', w: '........x.......' },
   // clear / results / game over
   fan1:   { c: 'X...............', k: 'X...............' },
   fanB:   { k: 'X.......X.......', s: '....x.......x...' },
@@ -1789,6 +1799,7 @@ const BASS = {
   ost16:   'RrorrbrrRror5bro',
   ost16b:  'RrrrRrrrRrrrRrbr',
   res:     'R-------5-------',
+  sGallop: 'R-rRR-rRR-rRo-5r',
 };
 
 const ARP = {
@@ -1799,6 +1810,8 @@ const ARP = {
   bell4: '0...2...4...2...',
   bell8: '4.2.3.1.4.2.5.3.',
   ost:   '0102010201020102',
+  sArp:  '0241302413024130',
+  sSpark: '0.3.1.4.2.5.3.1.',
 };
 
 const STAB = {
@@ -1964,6 +1977,62 @@ const SONGS = {
   },
 
   // ---------------------------------------------------------------------------
+  // STAGE 2 — "Violet Sargasso". D minor (a Dorian B in the breakdown), 138 BPM.
+  // Intro(4, once) -> A(8) -> B(8) -> C(8, breakdown) -> A2(8) -> B2(8) -> back to A.
+  stage2: {
+    bpm: 138, scale: [2, 4, 5, 7, 9, 10, 0], intro: ['I'], loop: ['A', 'B', 'C', 'A2', 'B2'],
+    mix: { lead: 1.15, arp: 0.8, pad: 1.0, bass: 0.85 },
+    sections: {
+      I: {
+        bars: 4, chords: 'Dm9 Bbmaj7 Gm7 A7sus4,A', pad: 'swell', padVel: 0.9, bass: 'long long long sGallop',
+        drums: 'sPulse sPulse sPulse sFill', arp: 'sSpark', arpInst: 'bell', arpLo: 74, arpVel: 0.7,
+      },
+      A: {
+        bars: 8, chords: 'Dm9 Bbmaj7 Gm7 A7sus4,A Dm9 Bbmaj7 Gm7,C Asus4,A7', pad: 'hold', padVel: 0.55,
+        bass: 'sGallop', drums: 'sDriveC sDrive sDrive sDrive2 sDrive sDrive sDrive sFill', arp: 'sArp', arpVel: 0.7,
+        lead:
+          'A4:2 D5:2 E5:2 F5:4 E5:2 D5:2 C5:2 ' +
+          'D5:6 F5:2 A5:8 ' +
+          'G5:3 F5:1 D5:2 Bb4:2 r:2 D5:2 F5:2 G5:2 ' +
+          'A5:6 G5:2 E5:4 C#5:4 ' +
+          'A4:2 D5:2 E5:2 F5:4 A5:2 G5:2 F5:2 ' +
+          'D6:6 C6:2 A5:4 F5:4 ' +
+          'G5:4 Bb5:4 C6:4 E5:4 ' +
+          'E5:6 D5:2 C#5:8',
+      },
+      B: {
+        bars: 8, chords: 'Fmaj7 C/E Dm7 Bbmaj7 Fmaj7 C/E Bbmaj7 A7sus4,A', pad: 'hold', padVel: 0.9,
+        bass: 'hook8', drums: 'hookC hook hook hook hookC hook hook fillT', stab: 'push', arp: 'arpB', arpVel: 0.75, harm: 'dia3',
+        lead:
+          'C5:2 F5:2 A5:2 C6:6 A5:2 G5:2 ' +
+          'G5:6 E5:2 C5:8 ' +
+          'D5:2 F5:2 A5:2 D6:6 C6:2 A5:2 ' +
+          'Bb5:6 A5:2 F5:8 ' +
+          'C5:2 F5:2 A5:2 C6:6 D6:2 E6:2 ' +
+          'E6:4 D6:4 C6:4 G5:4 ' +
+          'F5:4 Bb5:4 D6:6 C6:2 ' +
+          'A5:8 E5:4 C#5:4',
+      },
+      C: {
+        bars: 8, chords: 'Dm9 Em7 Fmaj7 Em7 Dm9 Em7 Gm6 A7sus4', pad: 'hold', padVel: 1,
+        bass: 'half', drums: 'halfC half half half halfC half build build', arp: 'sSpark', arpInst: 'bell', arpLo: 72, arpVel: 0.6,
+        timp: 'hit1 - - - hit1 - - roll2', leadInst: 'soft', leadVel: 0.9,
+        lead:
+          'A4:8 E5:8 ' +
+          'G5:8 B4:8 ' +
+          'C5:8 A5:8 ' +
+          'G5:12 r:4 ' +
+          'F5:6 E5:2 D5:8 ' +
+          'B4:6 D5:2 E5:8 ' +
+          'Bb4:6 D5:2 E5:8 ' +
+          'D5:4 E5:4 A5:8',
+      },
+      A2: null, // filled below (variation of A)
+      B2: null, // filled below (variation of B)
+    },
+  },
+
+  // ---------------------------------------------------------------------------
   // CLEAR — victory fanfare (C major, 128 BPM, 4 bars ≈ 7.5 s) flowing into a
   // warm results loop (90 BPM, 16 bars ≈ 42.7 s).
   clear: {
@@ -2030,6 +2099,15 @@ const SONGS = {
   S1.B2 = Object.assign({}, S1.B, {
     harm: 'dia3', stab: 'hits4 push hits4 push hits4 push hits4 push',
     drums: 'hookC hook hook hook hookC hook hook build', timp: '- - - - - - - roll2',
+  });
+  const S2 = SONGS.stage2.sections;
+  S2.A2 = Object.assign({}, S2.A, {
+    stab: 'syncB', arp: 'arpC', drums: 'sDriveC sDrive2 sDrive2 sDrive2 sDrive sDrive2 sDrive2 fillT',
+    counterInst: 'soft', counterVel: 0.55,
+    counter: 'A4:16 F4:16 G4:16 E4:16 A4:16 F4:16 G4:8 C5:8 E4:16',
+  });
+  S2.B2 = Object.assign({}, S2.B, {
+    stab: 'hits4 push hits4 push hits4 push hits4 push', drums: 'hookC hook hook hook hookC hook hook build', timp: '- - - - - - - roll2',
   });
   const SB = SONGS.boss.sections;
   SB.A2 = Object.assign({}, SB.A, { harm: 'dia3', stab: 'boss1', arp: 'arpB', arpLo: 69, arpVel: 0.55 });

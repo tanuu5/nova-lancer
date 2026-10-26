@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { G, clamp, lerp, smoothstep, mulberry32 } from './core.js';
 import {
   ATMO, FOG, GLSL_NOISE, GLSL_SKY, GLSL_FOG_FN, patchFog, TEX,
-  preparePalette, lerpPalette, applyPalette, makeEnvMap, LIGHTS,
+  preparePalette, lerpPalette, applyPalette, makeEnvMap, bakeSpaceSky, LIGHTS,
 } from './gfx.js';
 
 // ============================================================ Stage geography (installed by useStageWorld)
@@ -15,6 +15,7 @@ export let zoneW = () => ({});          // zone weights at rail distance d (the 
 export let pathX = () => 0;             // x of the rail centre line at distance d
 export let terrainHeight = () => 0;     // terrain height at world (x, z)
 let faceColor = (x, y, z, ny, out) => out.setRGB(0.5, 0.5, 0.5);
+const SPACE_FLOOR = -1e4;               // "ground height" in space: far below anything that flies
 
 
 // Rail frame at distance d: position on the path (y = 0), forward, right, up.
@@ -85,6 +86,7 @@ const decoByChunk = new Map();
 export const __worldDebug = { chunks, decoByChunk };   // read by the dev-build fingerprint (main.js __fp)
 
 function buildChunk(ci) {
+  if (SW.space) { chunks.set(ci, null); buildDecorations(ci); return; }   // nothing underfoot: only the stage's decorations
   const d0 = ci * CHUNK;
   const rows = ZN + 1;
   const px = new Float32Array(rows * XN), py = new Float32Array(rows * XN), pz = new Float32Array(rows * XN);
@@ -140,7 +142,8 @@ function buildChunk(ci) {
 
 function disposeChunk(ci) {
   const m = chunks.get(ci);
-  if (m) { G.scene.remove(m); m.geometry.dispose(); chunks.delete(ci); }
+  if (m) { G.scene.remove(m); m.geometry.dispose(); }
+  chunks.delete(ci);
   const deco = decoByChunk.get(ci);
   if (deco) { for (const o of deco) { G.scene.remove(o); o.dispose?.(); } decoByChunk.delete(ci); }
 }
@@ -462,16 +465,25 @@ export function initWorld() {
 }
 
 // Switch the world to a stage: geography, palettes (prepared once per stage, with their env maps), sea and clouds.
+// `space` (true or { band }) makes it a space stage: no terrain, sea or clouds, no gravity, and a nebula sky that is
+// baked once per stage (band: the normal of the nebula's brightest plane). Its palettes read as nebula colours:
+// zenith = deep space, mid / horizon = the two nebula colours, cloud = bright cores, cloudShadow = dust, cloudCover = strength.
 export function useStageWorld(def) {
   SW = def.world;
-  zoneW = SW.zoneW; pathX = SW.pathX; terrainHeight = SW.terrainHeight; faceColor = SW.faceColor;
+  zoneW = SW.zoneW; pathX = SW.pathX;
+  terrainHeight = SW.terrainHeight || (() => SPACE_FLOOR); faceColor = SW.faceColor || faceColor;
+  G.space = !!SW.space;
+  G.sea = !SW.space && SW.water !== false;
+  if (SW.space && !SW._skyMap) SW._skyMap = bakeSpaceSky(SW.space.band);
+  ATMO.uSpace.value = SW.space ? 1 : 0;
+  if (SW.space) ATMO.uSpaceMap.value = SW._skyMap;
   if (!SW._pal) {
     SW._pal = {}; SW._env = {};
     for (const k in SW.palettes) SW._pal[k] = preparePalette(SW.palettes[k]);
     for (const k in SW._pal) SW._env[k] = makeEnvMap(SW._pal[k]);
   }
-  water.visible = SW.water !== false;
-  clouds.visible = SW.clouds !== false;
+  water.visible = G.sea;
+  clouds.visible = !SW.space && SW.clouds !== false;
   resetTerrain();
 }
 

@@ -439,6 +439,10 @@ function onBossPhase(p) {
 }
 function onBossCharge() { if (firstCharge) { firstCharge = false; radio('gantetsu', 'ビームが来るぞ！　射線から外れろ！', { prio: 2, hold: 1 }); } }
 function onBossDying() { radio('mizuchi', 'ガ……ガガ……キノウ、テイ……シ……', { prio: 2, hold: 0.8 }); }
+function onBossPartDown(left) {   // turrets left on the back (6 at first)
+  if (left === 5) radio('kota', 'ひとつ潰した！　その調子！');
+  if (left === 2) radio('rio', '砲台、残り2基よ！');
+}
 
 // ------------------------------------------------------------ Definition
 export default {
@@ -466,7 +470,7 @@ export default {
       { who: 'hou', text: '……以後、目標を「ミズチ」と呼称する。各機、迎撃せよ！', hold: 1.2 },
     ],
   },
-  onBossPhase, onBossCharge, onBossDying,
+  onBossPhase, onBossCharge, onBossDying, onBossPartDown,
   // While the squadron circles, a black machine crosses far above (it returns in mission 04). The radio is quiet
   // while it passes: on phones the radio panel sits across the top of the screen, where the sky is.
   clearTime: 13.6,
